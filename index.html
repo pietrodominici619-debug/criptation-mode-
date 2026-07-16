@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;">
   <title>CryptoVault - Cifratura & Decifratura Locale</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
     @import "tailwindcss";
 
     /* Custom CSS variables for theme management & glassmorphism */
     :root {
-      --bg-gradient: radial-gradient(circle at 50% 0%, #151518 0%, #0a0a0c 100%);
+      --bg-gradient: linear-gradient(-45deg, #0a0a0c, #151518, #000000, #111827);
       --card-bg: rgba(21, 21, 24, 0.85);
       --card-border: rgba(255, 255, 255, 0.08);
       --text-main: #f8fafc;
@@ -23,7 +25,7 @@
     }
 
     [data-theme="light"] {
-      --bg-gradient: radial-gradient(circle at 50% 0%, #ffffff 0%, #f1f5f9 100%);
+      --bg-gradient: linear-gradient(-45deg, #ffffff, #f1f5f9, #e2e8f0, #f8fafc);
       --card-bg: rgba(255, 255, 255, 0.9);
       --card-border: rgba(0, 0, 0, 0.08);
       --text-main: #0f172a;
@@ -38,17 +40,38 @@
 
     body {
       background: var(--bg-gradient);
+      background-size: 200% 200%;
+      animation: gradientBG 15s ease infinite;
       color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
       transition: background 0.3s ease, color 0.3s ease;
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    @keyframes gradientBG {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace !important;
     }
 
     .glass-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      backdrop-filter: blur(16px);
-      box-shadow: 0 10px 30px -10px var(--shadow-color);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 10px 40px -10px var(--shadow-color), inset 0 1px 0 rgba(255,255,255,0.05);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -117,6 +140,15 @@
       background: rgba(156, 163, 175, 0.5);
     }
 
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    .animate-shake {
+      animation: shake 0.5s ease-in-out;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       * {
         animation: none !important;
@@ -152,6 +184,19 @@
           <span id="cleanup-timer">Sicurezza attiva: 05:00</span>
           <button id="btn-manual-cleanup" class="ml-1 text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer" title="Svuota memoria immediamente">Pulisci ora</button>
         </div>
+
+        <!-- App Lock Toggle -->
+        <button id="app-lock-toggle" class="p-2.5 rounded-xl bg-gray-500/10 text-gray-400 hover:text-white hover:bg-gray-500/20 transition-all cursor-pointer relative" aria-label="Blocco App" title="Blocca o Configura App">
+          <svg id="lock-icon-unlocked" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+          </svg>
+          <svg id="lock-icon-locked" class="w-5 h-5 hidden text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span id="lock-badge" class="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full hidden"></span>
+        </button>
 
         <!-- Light/Dark Toggle -->
         <button id="theme-toggle" class="p-2.5 rounded-xl bg-gray-500/10 text-gray-400 hover:text-white hover:bg-gray-500/20 transition-all cursor-pointer" aria-label="Cambia tema">
@@ -230,13 +275,13 @@
                 <label for="enc-plaintext" class="text-sm font-semibold tracking-wide">Testo in chiaro</label>
                 <span class="text-xs text-gray-400" id="enc-char-count">0 caratteri</span>
               </div>
-              <textarea id="enc-plaintext" class="glass-input w-full h-44 rounded-xl p-3.5 text-base sm:text-sm resize-none" placeholder="Inserisci o trascina (.txt) qui il testo che desideri cifrare..."></textarea>
+              <textarea autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="enc-plaintext" class="glass-input w-full h-44 rounded-xl p-3.5 text-base sm:text-sm resize-none" placeholder="Inserisci o trascina (.txt) qui il testo che desideri cifrare..."></textarea>
               
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="space-y-1.5">
                   <label for="enc-password" class="text-sm font-medium">Password di derivazione</label>
                   <div class="relative">
-                    <input type="password" id="enc-password" class="glass-input w-full rounded-xl py-2.5 pl-3.5 pr-10 text-base sm:text-sm" placeholder="Password robusta...">
+                    <input type="password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" id="enc-password" class="glass-input w-full rounded-xl py-2.5 pl-3.5 pr-10 text-base sm:text-sm" placeholder="Password robusta...">
                     <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-gray-400 hover:text-white">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -244,6 +289,14 @@
                       </svg>
                     </button>
                   </div>
+                  <p id="enc-password-warning" class="text-xs text-amber-500 hidden mt-1 flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                      <line x1="12" y1="9" x2="12" y2="13"></line>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    Questa password è già stata usata in passato.
+                  </p>
                 </div>
 
                 <div class="space-y-1.5">
@@ -310,7 +363,7 @@
             </h3>
             <span class="text-[10px] font-mono text-gray-400 bg-gray-500/10 px-2 py-0.5 rounded">salt:iv:ciphertext</span>
           </div>
-          <textarea id="enc-output" class="glass-input w-full h-32 rounded-xl p-3 text-xs font-mono resize-none bg-gray-500/5" readonly></textarea>
+          <textarea autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="enc-output" class="glass-input w-full h-32 rounded-xl p-3 text-xs font-mono resize-none bg-gray-500/5" readonly></textarea>
           <div class="flex flex-wrap gap-2 justify-end">
             <button id="btn-copy-enc" class="py-2 px-4 rounded-lg bg-gray-500/10 hover:bg-gray-500/20 text-xs font-medium transition-all flex items-center gap-2 cursor-pointer">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -338,13 +391,13 @@
             <label for="dec-ciphertext" class="text-sm font-semibold tracking-wide">Testo Cifrato (Base64)</label>
             <span class="text-[10px] text-gray-500 font-mono">formato salt:iv:ciphertext</span>
           </div>
-          <textarea id="dec-ciphertext" class="glass-input w-full h-36 rounded-xl p-3.5 text-base sm:text-xs font-mono resize-none" placeholder="Inserisci o trascina (.txt) il payload cifrato generato in precedenza..."></textarea>
+          <textarea autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="dec-ciphertext" class="glass-input w-full h-36 rounded-xl p-3.5 text-base sm:text-xs font-mono resize-none" placeholder="Inserisci o trascina (.txt) il payload cifrato generato in precedenza..."></textarea>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             <div class="space-y-1.5">
               <label for="dec-password" class="text-sm font-medium">Password di decifratura</label>
               <div class="relative">
-                <input type="password" id="dec-password" class="glass-input w-full rounded-xl py-2.5 pl-3.5 pr-10 text-base sm:text-sm" placeholder="Inserisci la password...">
+                <input type="password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" id="dec-password" class="glass-input w-full rounded-xl py-2.5 pl-3.5 pr-10 text-base sm:text-sm" placeholder="Inserisci la password...">
                 <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-gray-400 hover:text-white">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -383,7 +436,7 @@
               Decifratura completata con successo
             </h3>
           </div>
-          <textarea id="dec-output" class="glass-input w-full h-40 rounded-xl p-3.5 text-sm resize-none bg-gray-500/5" readonly></textarea>
+          <textarea autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="dec-output" class="glass-input w-full h-40 rounded-xl p-3.5 text-sm resize-none bg-gray-500/5" readonly></textarea>
           <div class="flex justify-end">
             <button id="btn-copy-dec" class="py-2 px-4 rounded-lg bg-gray-500/10 hover:bg-gray-500/20 text-xs font-medium transition-all flex items-center gap-2 cursor-pointer">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -472,7 +525,7 @@
             <div class="space-y-3">
               <label for="entropy-tester" class="text-xs text-gray-400">Verifica la robustezza di qualsiasi password</label>
               <div class="relative">
-                <input type="password" id="entropy-tester" class="glass-input w-full rounded-xl py-2.5 pl-3.5 pr-10 text-base sm:text-sm" placeholder="Digita una password...">
+                <input type="password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" id="entropy-tester" class="glass-input w-full rounded-xl py-2.5 pl-3.5 pr-10 text-base sm:text-sm" placeholder="Digita una password...">
                 <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-gray-400 hover:text-white">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -499,6 +552,109 @@
               <span id="calc-bruteforce" class="text-sm font-semibold font-mono text-indigo-300">N/D</span>
               <span class="text-[9px] text-gray-500 block">Stima calcolata ipotizzando un supercomputer da 10 miliardi di tentativi al secondo.</span>
             </div>
+            
+            <div id="entropy-chart-container"></div>
+          </div>
+
+          <!-- Mass Decryption Card -->
+          <div class="glass-card rounded-2xl p-5 space-y-4 border-t-2 border-t-blue-500 md:col-span-2">
+            <div class="flex items-center gap-2.5">
+              <div class="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-base font-semibold tracking-wide">Decifratura Massiva da File (.txt)</h3>
+                <p class="text-xs text-gray-400 mt-0.5 font-medium">Carica un file di testo con più blocchi cifrati separati da una o più righe vuote per decifrarli tutti in un colpo solo.</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end pt-2">
+              <!-- Password field -->
+              <div class="space-y-1.5 sm:col-span-2">
+                <label for="mass-dec-password" class="text-xs text-gray-400 font-medium">Password comune di decifratura</label>
+                <div class="relative">
+                  <input type="password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" id="mass-dec-password" class="glass-input w-full rounded-xl py-2.5 pl-3.5 pr-10 text-base sm:text-sm" placeholder="Password usata per cifrare i blocchi...">
+                  <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-gray-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Action trigger button -->
+              <button id="btn-mass-decrypt" class="w-full py-3 px-4 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm tracking-wide transition-all shadow-lg shadow-blue-500/10 flex items-center justify-center gap-2 cursor-pointer h-[46px]">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  <circle cx="12" cy="16" r="1"></circle>
+                </svg>
+                Avvia Decifratura
+              </button>
+            </div>
+
+            <!-- File dropzone -->
+            <div id="mass-dropzone" class="border-2 border-dashed border-gray-500/20 hover:border-blue-500/40 rounded-xl p-6 text-center cursor-pointer transition-all bg-gray-500/5 hover:bg-blue-500/5 relative">
+              <input type="file" id="mass-file-input" accept=".txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+              <div class="space-y-2 pointer-events-none">
+                <div class="mx-auto w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-gray-300" id="mass-file-label">Trascina qui il file .txt o clicca per esplorare</p>
+                  <p class="text-xs text-gray-500 mt-1">Formato supportato: .txt (separato da righe vuote)</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content preview -->
+            <div id="mass-preview-card" class="space-y-2 hidden">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase text-gray-400">Contenuto Rilevato</span>
+                <span id="mass-detected-blocks-count" class="text-xs font-mono font-bold text-blue-400">0 blocchi trovati</span>
+              </div>
+              <textarea autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="mass-preview-area" class="glass-input w-full h-24 rounded-xl p-3 text-xs font-mono resize-none text-gray-400" readonly></textarea>
+            </div>
+
+            <!-- Decryption Results -->
+            <div id="mass-results-card" class="space-y-3.5 hidden pt-2">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-semibold uppercase text-gray-400">Risultati della decifratura</h4>
+                <div class="flex items-center gap-2">
+                  <button id="btn-copy-all-mass" class="text-xs font-semibold py-1 px-2.5 rounded-lg bg-gray-500/10 hover:bg-gray-500/20 text-gray-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copia Decifrati
+                  </button>
+                  <button id="btn-download-all-mass" class="text-xs font-semibold py-1 px-2.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 transition-all flex items-center gap-1.5 cursor-pointer">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Scarica File (.txt)
+                  </button>
+                </div>
+              </div>
+
+              <!-- Results list container -->
+              <div id="mass-results-list" class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                <!-- Dynamically populated rows -->
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -506,14 +662,24 @@
       <!-- TAB: HISTORY -->
       <section id="tab-history" class="tab-content space-y-6">
         <div class="glass-card rounded-2xl p-5 space-y-4">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 class="text-base font-semibold tracking-wide">Cronologia Operazioni</h3>
               <p class="text-xs text-gray-400 mt-0.5">Ultimi 10 testi cifrati in questa sessione. Cifrati in sicurezza nel localStorage.</p>
             </div>
-            <button id="btn-clear-history" class="py-2 px-3.5 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-semibold cursor-pointer transition-all">
-              Cancella tutto
-            </button>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="btn-export-history" class="py-2 px-3.5 rounded-xl border border-gray-500/15 text-gray-300 hover:bg-gray-500/10 hover:text-white text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5" title="Esporta cronologia in formato CSV">
+                <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Esporta (.csv)
+              </button>
+              <button id="btn-clear-history" class="py-2 px-3.5 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-semibold cursor-pointer transition-all">
+                Cancella tutto
+              </button>
+            </div>
           </div>
 
           <div id="history-empty" class="py-12 flex flex-col items-center justify-center text-center space-y-3">
@@ -549,17 +715,227 @@
   <!-- TOAST NOTIFICATION CONTAINER -->
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"></div>
 
+  <!-- LOCK CONFIGURATION MODAL -->
+  <div id="lock-config-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-all duration-300">
+    <div class="glass-card rounded-2xl w-full max-w-md p-6 space-y-5 border border-white/10 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+      <button id="btn-close-lock-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-all cursor-pointer">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div>
+          <h3 id="lock-modal-title" class="text-lg font-bold text-white">Configura Blocco App</h3>
+          <p id="lock-modal-desc" class="text-xs text-gray-400">Proteggi l'applicazione con una password o un PIN numerico.</p>
+        </div>
+      </div>
+
+      <!-- State 1: Setup Password/PIN -->
+      <div id="lock-setup-container" class="space-y-4">
+        <!-- Choose between Password or numeric PIN -->
+        <div class="grid grid-cols-2 gap-2 p-1 bg-gray-500/5 rounded-xl border border-gray-500/10">
+          <button id="btn-lock-type-pw" type="button" class="py-2 px-3 rounded-lg font-medium text-xs text-center transition-all cursor-pointer bg-white/10 text-white">
+            Password Testuale
+          </button>
+          <button id="btn-lock-type-pin" type="button" class="py-2 px-3 rounded-lg font-medium text-xs text-center transition-all cursor-pointer text-gray-400 hover:text-white">
+            PIN Numerico
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div class="space-y-1.5">
+            <label for="lock-input-val" id="lbl-lock-input" class="text-xs text-gray-400 font-medium">Inserisci Password</label>
+            <div class="relative">
+              <input type="password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" id="lock-input-val" class="glass-input w-full rounded-xl py-2.5 px-3.5 text-sm" placeholder="Minimo 4 caratteri...">
+              <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-gray-400 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="lock-input-confirm" class="text-xs text-gray-400 font-medium">Conferma</label>
+            <div class="relative">
+              <input type="password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" id="lock-input-confirm" class="glass-input w-full rounded-xl py-2.5 px-3.5 text-sm" placeholder="Ripeti la password...">
+              <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-gray-400 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-save-lock" class="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-sm tracking-wide transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 cursor-pointer mt-2">
+          Salva e Attiva Blocco
+        </button>
+      </div>
+
+      <!-- State 2: Lock already configured, Manage options -->
+      <div id="lock-manage-container" class="space-y-4 hidden">
+        <div class="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/10 text-xs text-amber-300 flex items-start gap-2.5">
+          <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <div>
+            <p class="font-semibold">Blocco App Attivo</p>
+            <p class="text-[11px] text-gray-400 mt-0.5">La protezione è configurata. Puoi bloccare l'applicazione immediatamente o disattivare la protezione inserendo la password corrente.</p>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <!-- Button to immediately lock -->
+          <button id="btn-action-lock-now" class="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-sm tracking-wide transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            Blocca App Ora
+          </button>
+
+          <div class="border-t border-gray-500/10 my-3 pt-3">
+            <h4 class="text-xs font-semibold text-gray-300 mb-2">Rimuovi Protezione</h4>
+            <div class="space-y-2.5">
+              <div class="relative">
+                <input type="password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" id="lock-remove-verify" class="glass-input w-full rounded-xl py-2.5 px-3.5 text-sm" placeholder="Inserisci password/PIN corrente...">
+                <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-gray-400 hover:text-white">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+              <button id="btn-remove-lock" class="w-full py-2.5 px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-semibold text-xs transition-all border border-red-500/20 flex items-center justify-center gap-2 cursor-pointer">
+                Rimuovi Protezione e Disattiva Blocco
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP LOCKED SCREEN OVERLAY -->
+  <div id="app-locked-overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl hidden">
+    <div class="glass-card rounded-2xl w-full max-w-md p-6 space-y-6 border border-white/10 shadow-2xl text-center relative">
+      
+      <!-- App Header inside lock screen -->
+      <div class="flex flex-col items-center gap-3">
+        <div class="p-4 rounded-full bg-amber-500/10 text-amber-500 animate-pulse">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold text-white tracking-tight">CryptoVault è protetto</h2>
+          <p id="locked-screen-desc" class="text-xs text-gray-400 mt-1">Inserisci la password o il PIN per sbloccare l'applicazione.</p>
+        </div>
+      </div>
+
+      <!-- Error feedback -->
+      <div id="lock-error-msg" class="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl py-2 px-3 hidden animate-shake">
+        Password o PIN non corretto. Riprova.
+      </div>
+
+      <!-- Password unlocking container -->
+      <div id="unlock-password-container" class="space-y-4">
+        <div class="relative">
+          <input type="password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" id="unlock-password-input" class="glass-input w-full rounded-xl py-3 px-4 text-center text-lg font-mono tracking-widest" placeholder="••••••••">
+          <button type="button" class="btn-toggle-pw absolute right-4 top-3 text-gray-400 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+        <button id="btn-unlock-password" class="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-sm tracking-wide transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 cursor-pointer">
+          Sblocca Applicazione
+        </button>
+      </div>
+
+      <!-- PIN unlocking container -->
+      <div id="unlock-pin-container" class="space-y-5 hidden">
+        <!-- Dot placeholders for PIN -->
+        <div class="flex items-center justify-center gap-3 py-1">
+          <span class="pin-dot w-3.5 h-3.5 rounded-full border border-gray-600 bg-transparent transition-all duration-200"></span>
+          <span class="pin-dot w-3.5 h-3.5 rounded-full border border-gray-600 bg-transparent transition-all duration-200"></span>
+          <span class="pin-dot w-3.5 h-3.5 rounded-full border border-gray-600 bg-transparent transition-all duration-200"></span>
+          <span class="pin-dot w-3.5 h-3.5 rounded-full border border-gray-600 bg-transparent transition-all duration-200"></span>
+          <!-- Dynamic support for more dots if the set PIN has length > 4 -->
+          <span class="pin-dot-extra hidden w-3.5 h-3.5 rounded-full border border-gray-600 bg-transparent transition-all duration-200"></span>
+          <span class="pin-dot-extra hidden w-3.5 h-3.5 rounded-full border border-gray-600 bg-transparent transition-all duration-200"></span>
+        </div>
+        
+        <input type="password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" id="unlock-pin-input" class="sr-only" maxlength="8" readonly>
+
+        <!-- PIN Pad (3x4 grid) -->
+        <div class="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
+          <button type="button" class="pin-btn w-14 h-14 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-white font-bold text-lg flex items-center justify-center transition-all cursor-pointer select-none">1</button>
+          <button type="button" class="pin-btn w-14 h-14 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-white font-bold text-lg flex items-center justify-center transition-all cursor-pointer select-none">2</button>
+          <button type="button" class="pin-btn w-14 h-14 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-white font-bold text-lg flex items-center justify-center transition-all cursor-pointer select-none">3</button>
+          
+          <button type="button" class="pin-btn w-14 h-14 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-white font-bold text-lg flex items-center justify-center transition-all cursor-pointer select-none">4</button>
+          <button type="button" class="pin-btn w-14 h-14 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-white font-bold text-lg flex items-center justify-center transition-all cursor-pointer select-none">5</button>
+          <button type="button" class="pin-btn w-14 h-14 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-white font-bold text-lg flex items-center justify-center transition-all cursor-pointer select-none">6</button>
+          
+          <button type="button" class="pin-btn w-14 h-14 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-white font-bold text-lg flex items-center justify-center transition-all cursor-pointer select-none">7</button>
+          <button type="button" class="pin-btn w-14 h-14 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-white font-bold text-lg flex items-center justify-center transition-all cursor-pointer select-none">8</button>
+          <button type="button" class="pin-btn w-14 h-14 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-white font-bold text-lg flex items-center justify-center transition-all cursor-pointer select-none">9</button>
+          
+          <button type="button" id="btn-pin-clear" class="w-14 h-14 rounded-full text-gray-400 hover:text-white font-semibold text-xs flex items-center justify-center transition-all cursor-pointer select-none">Canc</button>
+          <button type="button" class="pin-btn w-14 h-14 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-white font-bold text-lg flex items-center justify-center transition-all cursor-pointer select-none">0</button>
+          <button type="button" id="btn-pin-delete" class="w-14 h-14 rounded-full text-gray-400 hover:text-white flex items-center justify-center transition-all cursor-pointer select-none">
+            <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+              <line x1="18" y1="9" x2="12" y2="15"></line>
+              <line x1="12" y1="9" x2="18" y2="15"></line>
+            </svg>
+          </button>
+        </div>
+
+        <button id="btn-unlock-pin" class="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-sm tracking-wide transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 cursor-pointer mt-2">
+          Sblocca PIN
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <script type="module">
+    import { renderChart } from './src/Chart.tsx';
+
     // Core Application State
     const AppState = {
       activeTab: 'encrypt',
       theme: 'dark',
       history: [],
+      entropyHistory: [],
       autoCleanSeconds: 300,
       timerInterval: null,
-      sessionKey: null
+      sessionKey: null,
+      failedLockAttempts: 0,
+      lockCooldownUntil: 0
     };
+
+    let chartRenderer = null;
+    let massBlocks = [];
+    let massDecryptedResults = [];
 
     // DOM References
     const elements = {
@@ -578,6 +954,7 @@
       encPlaintext: document.getElementById('enc-plaintext'),
       encCharCount: document.getElementById('enc-char-count'),
       encPassword: document.getElementById('enc-password'),
+      encPasswordWarning: document.getElementById('enc-password-warning'),
       encKeyLen: document.getElementById('enc-key-len'),
       lblKeyLen: document.getElementById('lbl-key-len'),
       encAlgo: document.getElementById('enc-algo'),
@@ -620,7 +997,51 @@
       // History tab
       historyEmpty: document.getElementById('history-empty'),
       historyList: document.getElementById('history-list'),
-      btnClearHistory: document.getElementById('btn-clear-history')
+      btnExportHistory: document.getElementById('btn-export-history'),
+      btnClearHistory: document.getElementById('btn-clear-history'),
+
+      // Mass decrypt tools
+      massDecPassword: document.getElementById('mass-dec-password'),
+      btnMassDecrypt: document.getElementById('btn-mass-decrypt'),
+      massDropzone: document.getElementById('mass-dropzone'),
+      massFileInput: document.getElementById('mass-file-input'),
+      massFileLabel: document.getElementById('mass-file-label'),
+      massPreviewCard: document.getElementById('mass-preview-card'),
+      massDetectedBlocksCount: document.getElementById('mass-detected-blocks-count'),
+      massPreviewArea: document.getElementById('mass-preview-area'),
+      massResultsCard: document.getElementById('mass-results-card'),
+      massResultsList: document.getElementById('mass-results-list'),
+      btnCopyAllMass: document.getElementById('btn-copy-all-mass'),
+      btnDownloadAllMass: document.getElementById('btn-download-all-mass'),
+
+      // App Lock elements
+      appLockToggle: document.getElementById('app-lock-toggle'),
+      lockIconUnlocked: document.getElementById('lock-icon-unlocked'),
+      lockIconLocked: document.getElementById('lock-icon-locked'),
+      lockBadge: document.getElementById('lock-badge'),
+      lockConfigModal: document.getElementById('lock-config-modal'),
+      btnCloseLockModal: document.getElementById('btn-close-lock-modal'),
+      lockModalTitle: document.getElementById('lock-modal-title'),
+      lockModalDesc: document.getElementById('lock-modal-desc'),
+      lockSetupContainer: document.getElementById('lock-setup-container'),
+      btnLockTypePw: document.getElementById('btn-lock-type-pw'),
+      btnLockTypePin: document.getElementById('btn-lock-type-pin'),
+      lblLockInput: document.getElementById('lbl-lock-input'),
+      lockInputVal: document.getElementById('lock-input-val'),
+      lockInputConfirm: document.getElementById('lock-input-confirm'),
+      btnSaveLock: document.getElementById('btn-save-lock'),
+      lockManageContainer: document.getElementById('lock-manage-container'),
+      btnActionLockNow: document.getElementById('btn-action-lock-now'),
+      lockRemoveVerify: document.getElementById('lock-remove-verify'),
+      btnRemoveLock: document.getElementById('btn-remove-lock'),
+      appLockedOverlay: document.getElementById('app-locked-overlay'),
+      lockErrorMsg: document.getElementById('lock-error-msg'),
+      unlockPasswordContainer: document.getElementById('unlock-password-container'),
+      unlockPasswordInput: document.getElementById('unlock-password-input'),
+      btnUnlockPassword: document.getElementById('btn-unlock-password'),
+      unlockPinContainer: document.getElementById('unlock-pin-container'),
+      unlockPinInput: document.getElementById('unlock-pin-input'),
+      btnUnlockPin: document.getElementById('btn-unlock-pin')
     };
 
     // -------------------------------------------------------------------------
@@ -652,6 +1073,99 @@
     }
 
     // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    // PASSWORD REUSE PREVENTION LOGIC
+    // -------------------------------------------------------------------------
+    async function getPwObfuscationKey() {
+      let keyB64 = localStorage.getItem('cv_pw_hash_key');
+      if (!keyB64) {
+        const rawKey = window.crypto.getRandomValues(new Uint8Array(32));
+        keyB64 = arrayBufferToBase64(rawKey);
+        localStorage.setItem('cv_pw_hash_key', keyB64);
+      }
+      const rawKeyBytes = base64ToArrayBuffer(keyB64);
+      return await window.crypto.subtle.importKey(
+        "raw",
+        rawKeyBytes,
+        { name: "AES-GCM" },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function getUsedPasswordHashes() {
+      const encryptedData = localStorage.getItem('cv_used_pw_hashes');
+      if (!encryptedData) return [];
+      try {
+        const parts = encryptedData.split(':');
+        if (parts.length !== 2) return [];
+        const iv = new Uint8Array(base64ToArrayBuffer(parts[0]));
+        const ciphertext = base64ToArrayBuffer(parts[1]);
+        const key = await getPwObfuscationKey();
+        const decrypted = await window.crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: iv },
+          key,
+          ciphertext
+        );
+        const jsonStr = new TextDecoder().decode(decrypted);
+        return JSON.parse(jsonStr);
+      } catch (e) {
+        console.error("Errore decodifica hash password:", e);
+        return [];
+      }
+    }
+
+    async function saveUsedPasswordHashes(hashesArray) {
+      try {
+        const key = await getPwObfuscationKey();
+        const jsonStr = JSON.stringify(hashesArray);
+        const encoded = new TextEncoder().encode(jsonStr);
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const encrypted = await window.crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: iv },
+          key,
+          encoded
+        );
+        const ivB64 = arrayBufferToBase64(iv);
+        const ciphertextB64 = arrayBufferToBase64(encrypted);
+        localStorage.setItem('cv_used_pw_hashes', `${ivB64}:${ciphertextB64}`);
+      } catch (e) {
+        console.error("Errore salvataggio hash password:", e);
+      }
+    }
+
+    async function hashPasswordForCheck(password) {
+      const msgUint8 = new TextEncoder().encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function checkPasswordReuse(password) {
+      if (!password) {
+        elements.encPasswordWarning.classList.add('hidden');
+        return;
+      }
+      const hash = await hashPasswordForCheck(password);
+      const hashes = await getUsedPasswordHashes();
+      if (hashes.includes(hash)) {
+        elements.encPasswordWarning.classList.remove('hidden');
+      } else {
+        elements.encPasswordWarning.classList.add('hidden');
+      }
+    }
+
+    async function registerUsedPassword(password) {
+      if (!password) return;
+      const hash = await hashPasswordForCheck(password);
+      const hashes = await getUsedPasswordHashes();
+      if (!hashes.includes(hash)) {
+        hashes.push(hash);
+        await saveUsedPasswordHashes(hashes);
+      }
+    }
+
     // SECURITY: Secure session storage-based history key (Military-grade local privacy)
     // -------------------------------------------------------------------------
     async function getSessionKey() {
@@ -723,7 +1237,7 @@
     // -------------------------------------------------------------------------
     // CRITTOGRAFIA: Web Crypto API AES-GCM/AES-CBC + PBKDF2
     // -------------------------------------------------------------------------
-    async function deriveKeyFromPassword(password, saltBytes, keyLengthBits, algoType = "AES-GCM") {
+    async function deriveKeyFromPassword(password, saltBytes, keyLengthBits, algoType = "AES-GCM", iterations = 210000) {
       const pwBytes = new TextEncoder().encode(password);
       
       // Import password as PBKDF2 base key
@@ -735,12 +1249,15 @@
         ["deriveBits", "deriveKey"]
       );
 
-      // Derive AES key with 100,000 iterations
+      // Securely zero-out plaintext password bytes in memory immediately after importing
+      pwBytes.fill(0);
+
+      // Derive AES key with given iterations
       return await window.crypto.subtle.deriveKey(
         {
           name: "PBKDF2",
           salt: saltBytes,
-          iterations: 100000,
+          iterations: iterations,
           hash: "SHA-256"
         },
         baseKey,
@@ -769,6 +1286,9 @@
         key,
         encodedPlaintext
       );
+
+      // Securely zero-out plain text bytes after successful encryption
+      encodedPlaintext.fill(0);
 
       // 4. Encode each block to Base64 and join with colon
       const saltB64 = arrayBufferToBase64(saltBytes);
@@ -800,27 +1320,36 @@
         : [{ name: "AES-GCM", keyLengths: [256, 128, 192] }, { name: "AES-CBC", keyLengths: [128] }];
 
       let lastError = null;
+      const iterationsToTry = [210000, 100000];
 
       for (const algo of algosToTry) {
         for (const bitLength of algo.keyLengths) {
-          try {
-            const key = await deriveKeyFromPassword(password, saltBytes, bitLength, algo.name);
-            const decryptedBuffer = await window.crypto.subtle.decrypt(
-              {
-                name: algo.name,
-                iv: ivBytes
-              },
-              key,
-              ciphertextBuffer
-            );
-            
-            // Update UI dropdown to match the successfully decrypted algorithm
-            if (elements.decAlgo && algo.name !== elements.decAlgo.value) {
-              elements.decAlgo.value = algo.name;
+          for (const iter of iterationsToTry) {
+            try {
+              const key = await deriveKeyFromPassword(password, saltBytes, bitLength, algo.name, iter);
+              const decryptedBuffer = await window.crypto.subtle.decrypt(
+                {
+                  name: algo.name,
+                  iv: ivBytes
+                },
+                key,
+                ciphertextBuffer
+              );
+              
+              // Update UI dropdown to match the successfully decrypted algorithm
+              if (elements.decAlgo && algo.name !== elements.decAlgo.value) {
+                elements.decAlgo.value = algo.name;
+              }
+              
+              const decryptedText = new TextDecoder().decode(decryptedBuffer);
+              
+              // Securely zero-out decrypted buffer memory
+              new Uint8Array(decryptedBuffer).fill(0);
+              
+              return decryptedText;
+            } catch (e) {
+              lastError = e;
             }
-            return new TextDecoder().decode(decryptedBuffer);
-          } catch (e) {
-            lastError = e;
           }
         }
       }
@@ -1052,6 +1581,83 @@
     }
 
     // -------------------------------------------------------------------------
+    // RENDERING MASS DECRYPTION ROW
+    // -------------------------------------------------------------------------
+    function renderMassResultRow(result) {
+      const row = document.createElement('div');
+      row.className = `p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+        result.success 
+          ? 'bg-emerald-500/5 border-emerald-500/20' 
+          : 'bg-red-500/5 border-red-500/20'
+      }`;
+
+      const leftSide = document.createElement('div');
+      leftSide.className = 'space-y-1 min-w-0 flex-1';
+
+      const headerLine = document.createElement('div');
+      headerLine.className = 'flex items-center gap-2 flex-wrap';
+
+      const badgeIndex = document.createElement('span');
+      badgeIndex.className = 'font-bold font-mono px-1.5 py-0.5 rounded bg-gray-500/10 text-gray-400';
+      badgeIndex.textContent = `#${result.index}`;
+      headerLine.appendChild(badgeIndex);
+
+      if (result.success) {
+        const badgeSuccess = document.createElement('span');
+        badgeSuccess.className = 'px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold uppercase text-[10px]';
+        badgeSuccess.textContent = 'Successo';
+        headerLine.appendChild(badgeSuccess);
+
+        const badgeAlgo = document.createElement('span');
+        badgeAlgo.className = 'px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono text-[10px]';
+        badgeAlgo.textContent = result.algo;
+        headerLine.appendChild(badgeAlgo);
+      } else {
+        const badgeFail = document.createElement('span');
+        badgeFail.className = 'px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-semibold uppercase text-[10px]';
+        badgeFail.textContent = 'Fallito';
+        headerLine.appendChild(badgeFail);
+      }
+
+      const cipherTextPreview = document.createElement('span');
+      cipherTextPreview.className = 'text-[10px] font-mono text-gray-500 truncate max-w-[200px] block sm:inline';
+      cipherTextPreview.textContent = `Payload: ${result.rawCiphertext.substring(0, 20)}...`;
+      headerLine.appendChild(cipherTextPreview);
+
+      leftSide.appendChild(headerLine);
+
+      const bodyText = document.createElement('div');
+      bodyText.className = 'font-mono break-all text-gray-300 whitespace-pre-wrap mt-1';
+      if (result.success) {
+        bodyText.textContent = result.plaintext;
+      } else {
+        bodyText.className = 'text-red-400 font-medium mt-1';
+        bodyText.textContent = result.error;
+      }
+      leftSide.appendChild(bodyText);
+      row.appendChild(leftSide);
+
+      if (result.success) {
+        const btnCopy = document.createElement('button');
+        btnCopy.className = 'shrink-0 p-2 rounded-lg bg-gray-500/10 hover:bg-gray-500/20 text-gray-400 hover:text-white transition-all cursor-pointer flex items-center justify-center self-end sm:self-center';
+        btnCopy.title = 'Copia testo decifrato';
+        btnCopy.innerHTML = `
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        `;
+        btnCopy.addEventListener('click', () => {
+          navigator.clipboard.writeText(result.plaintext);
+          showToast(`Blocco #${result.index} copiato.`, "success");
+        });
+        row.appendChild(btnCopy);
+      }
+
+      elements.massResultsList.appendChild(row);
+    }
+
+    // -------------------------------------------------------------------------
     // TAB MANAGEMENT
     // -------------------------------------------------------------------------
     function switchTab(tabId) {
@@ -1136,13 +1742,78 @@
       resetCleanupTimer();
     }
 
+    let hasWarnedImminentCleanup = false;
+    let swRegistration = null;
+
+    // Register Service Worker for System Notifications & Offline functionality
+    async function registerServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        try {
+          const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+          console.log('Service Worker registrato con successo:', reg);
+          swRegistration = reg;
+          
+          // Request Notification permission gracefully on startup
+          if ('Notification' in window && Notification.permission === 'default') {
+            setTimeout(() => {
+              Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                  console.log('Permesso notifiche accordato.');
+                  sendSystemNotification("Notifiche Attive", "CryptoVault ti avviserà al termine delle operazioni lunghe o prima della pulizia memoria.");
+                }
+              });
+            }, 1500);
+          }
+        } catch (err) {
+          console.error('Errore durante la registrazione del Service Worker:', err);
+        }
+      }
+    }
+
+    // Send a system notification through the Service Worker (or fallback)
+    function sendSystemNotification(title, body, options = {}) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title: title,
+            options: {
+              body: body,
+              ...options
+            }
+          });
+        } else {
+          const defaultIcon = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="none" stroke="%236366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+          new Notification(title, {
+            body: body,
+            icon: defaultIcon,
+            ...options
+          });
+        }
+      }
+    }
+
     function startSecurityTimer() {
       if (AppState.timerInterval) clearInterval(AppState.timerInterval);
       
       AppState.timerInterval = setInterval(() => {
         AppState.autoCleanSeconds--;
+        
+        // Update App Lock Cooldown UI countdown
+        updateCooldownUI();
+        
+        // Notify user if cleanup is imminent (30 seconds remaining)
+        if (AppState.autoCleanSeconds === 30 && !hasWarnedImminentCleanup) {
+          hasWarnedImminentCleanup = true;
+          sendSystemNotification(
+            "Pulizia Memoria Imminente",
+            "La memoria sensibile verrà svuotata tra 30 secondi per sicurezza. Interagisci con la pagina per annullare."
+          );
+        }
+
         if (AppState.autoCleanSeconds <= 0) {
           runCleanup();
+          hasWarnedImminentCleanup = false;
         } else {
           updateCleanupUI();
         }
@@ -1155,6 +1826,7 @@
         // Only reset if not already expired/zero to prevent loops during cleanup
         if (AppState.autoCleanSeconds > 0 && AppState.autoCleanSeconds < 300) {
           resetCleanupTimer();
+          hasWarnedImminentCleanup = false;
         }
       });
     });
@@ -1183,6 +1855,17 @@
       elements.calcRating.textContent = details.label;
       elements.calcRating.className = `text-sm font-bold block mt-1 ${details.color}`;
       elements.calcBruteforce.textContent = bruteForce;
+
+      if (password && password.length > 0) {
+        const timeStr = new Date().toLocaleTimeString('it-IT', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        AppState.entropyHistory.push({ time: timeStr, entropia: Number(entropy.toFixed(1)) });
+        if (AppState.entropyHistory.length > 20) {
+          AppState.entropyHistory.shift();
+        }
+        if (chartRenderer) {
+          chartRenderer.update([...AppState.entropyHistory]);
+        }
+      }
     }
 
     // -------------------------------------------------------------------------
@@ -1220,10 +1903,188 @@
     }
 
     // -------------------------------------------------------------------------
+    // APP LOCK SECURITY FUNCTIONS
+    // -------------------------------------------------------------------------
+    let selectedLockType = 'password';
+
+    async function hashPin(pin, saltHex = null) {
+      let saltBytes;
+      if (saltHex) {
+        // Convert hex back to bytes
+        saltBytes = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+      } else {
+        saltBytes = window.crypto.getRandomValues(new Uint8Array(16));
+        const newSaltHex = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        localStorage.setItem('vault_lock_salt', newSaltHex);
+      }
+      
+      const pinBytes = new TextEncoder().encode(pin);
+      const baseKey = await window.crypto.subtle.importKey(
+        "raw",
+        pinBytes,
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+      );
+      
+      // Securely zero-out plain text pin bytes immediately after import
+      pinBytes.fill(0);
+      
+      const derivedKey = await window.crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt: saltBytes,
+          iterations: 50000,
+          hash: "SHA-256"
+        },
+        baseKey,
+        { name: "HMAC", hash: "SHA-256", length: 256 },
+        true,
+        ["sign"]
+      );
+      
+      const exported = await window.crypto.subtle.exportKey("raw", derivedKey);
+      const hashArray = Array.from(new Uint8Array(exported));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function verifyUnlockInput(verifyVal) {
+      if (Date.now() < AppState.lockCooldownUntil) {
+        return false;
+      }
+
+      const storedHash = localStorage.getItem('vault_lock_hash');
+      const storedSalt = localStorage.getItem('vault_lock_salt');
+      let isValid = false;
+
+      if (storedSalt) {
+        const hashVerify = await hashPin(verifyVal, storedSalt);
+        isValid = (hashVerify === storedHash);
+      } else {
+        // Fallback per retrocompatibilità con hash semplici senza salt
+        const msgUint8 = new TextEncoder().encode(verifyVal);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const legacyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        if (legacyHash === storedHash) {
+          isValid = true;
+          // Migrazione automatica a PBKDF2 con Salt
+          const newHash = await hashPin(verifyVal);
+          localStorage.setItem('vault_lock_hash', newHash);
+        }
+      }
+
+      if (isValid) {
+        AppState.failedLockAttempts = 0;
+        AppState.lockCooldownUntil = 0;
+      } else {
+        AppState.failedLockAttempts++;
+        if (AppState.failedLockAttempts >= 5) {
+          AppState.lockCooldownUntil = Date.now() + 30000; // 30 secondi di cooldown
+          AppState.failedLockAttempts = 0;
+        }
+      }
+
+      return isValid;
+    }
+
+    function updateCooldownUI() {
+      if (Date.now() < AppState.lockCooldownUntil) {
+        const remaining = Math.ceil((AppState.lockCooldownUntil - Date.now()) / 1000);
+        elements.lockErrorMsg.textContent = `Troppi tentativi falliti. Riprova tra ${remaining} secondi.`;
+        elements.lockErrorMsg.classList.remove('hidden');
+        
+        // Disabilitazione pulsanti e input
+        elements.unlockPasswordInput.disabled = true;
+        elements.btnUnlockPassword.disabled = true;
+        document.querySelectorAll('.pin-btn').forEach(btn => btn.disabled = true);
+        elements.btnUnlockPin.disabled = true;
+        
+        return true;
+      } else {
+        if (elements.unlockPasswordInput.disabled) {
+          elements.unlockPasswordInput.disabled = false;
+          elements.btnUnlockPassword.disabled = false;
+          document.querySelectorAll('.pin-btn').forEach(btn => btn.disabled = false);
+          elements.btnUnlockPin.disabled = false;
+          elements.lockErrorMsg.classList.add('hidden');
+        }
+        return false;
+      }
+    }
+
+    function isLockEnabled() {
+      return localStorage.getItem('vault_lock_enabled') === 'true';
+    }
+
+    function updateLockStatusUI() {
+      if (isLockEnabled()) {
+        elements.lockIconUnlocked.classList.add('hidden');
+        elements.lockIconLocked.classList.remove('hidden');
+        elements.lockBadge.classList.remove('hidden');
+      } else {
+        elements.lockIconUnlocked.classList.remove('hidden');
+        elements.lockIconLocked.classList.add('hidden');
+        elements.lockBadge.classList.add('hidden');
+      }
+    }
+
+    function lockAppImmediate() {
+      if (!isLockEnabled()) return;
+      
+      // Mark as locked in session so it remains locked upon manual or auto locking
+      sessionStorage.setItem('vault_app_locked', 'true');
+      
+      elements.appLockedOverlay.classList.remove('hidden');
+      
+      // Clear unlock inputs
+      elements.unlockPasswordInput.value = '';
+      elements.unlockPinInput.value = '';
+      elements.lockErrorMsg.classList.add('hidden');
+      
+      const lockType = localStorage.getItem('vault_lock_type') || 'password';
+      if (lockType === 'pin') {
+        elements.unlockPasswordContainer.classList.add('hidden');
+        elements.unlockPinContainer.classList.remove('hidden');
+        updatePinDotsUI();
+      } else {
+        elements.unlockPasswordContainer.classList.remove('hidden');
+        elements.unlockPinContainer.classList.add('hidden');
+        // Delay to ensure visibility is applied before focusing
+        setTimeout(() => elements.unlockPasswordInput.focus(), 150);
+      }
+    }
+
+    function updatePinDotsUI() {
+      const pinVal = elements.unlockPinInput.value;
+      const targetLength = parseInt(localStorage.getItem('vault_lock_pin_length') || '6', 10);
+      
+      const dots = document.querySelectorAll('.pin-dot');
+      const extraDots = document.querySelectorAll('.pin-dot-extra');
+      const allDots = [...Array.from(dots), ...Array.from(extraDots)];
+      
+      allDots.forEach((dot, index) => {
+        if (index < targetLength) {
+          dot.classList.remove('hidden');
+          if (index < pinVal.length) {
+            dot.classList.add('bg-amber-500', 'border-amber-500');
+            dot.classList.remove('bg-transparent', 'border-gray-600');
+          } else {
+            dot.classList.remove('bg-amber-500', 'border-amber-500');
+            dot.classList.add('bg-transparent', 'border-gray-600');
+          }
+        } else {
+          dot.classList.add('hidden');
+        }
+      });
+    }
+
+    // -------------------------------------------------------------------------
     // DEBOUNCED TESTING INPUTS
     // -------------------------------------------------------------------------
-    let debounceTimer;
     function debounce(func, delay = 150) {
+      let debounceTimer;
       return (...args) => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => func(...args), delay);
@@ -1234,6 +2095,14 @@
     // EVENT LISTENERS BINDINGS
     // -------------------------------------------------------------------------
     function initApp() {
+      // Init Chart
+      if (typeof renderChart === 'function') {
+        chartRenderer = renderChart('entropy-chart-container');
+        if (chartRenderer) {
+          chartRenderer.update(AppState.entropyHistory);
+        }
+      }
+
       // Theme initial loader
       const savedTheme = localStorage.getItem('cv_theme') || 'dark';
       document.documentElement.setAttribute('data-theme', savedTheme);
@@ -1249,6 +2118,9 @@
       // Start Security Timer
       startSecurityTimer();
       updateCleanupUI();
+
+      // Register Service Worker
+      registerServiceWorker();
 
       // Drag & drop setups
       setupDragAndDrop(elements.encPlaintext, 'drag-over', 'drag-over');
@@ -1305,8 +2177,9 @@
       });
 
       // Password Entropy Realtime (debounced)
-      elements.encPassword.addEventListener('input', debounce((e) => {
+      elements.encPassword.addEventListener('input', debounce(async (e) => {
         updatePasswordStrength(e.target.value);
+        await checkPasswordReuse(e.target.value);
       }));
 
       // Key Length range change
@@ -1348,6 +2221,8 @@
 
         try {
           const payload = await encryptText(text, pw, keySize, algo);
+          
+          await registerUsedPassword(pw);
           
           elements.encOutput.value = payload;
           elements.encOutputCard.classList.remove('hidden');
@@ -1472,6 +2347,229 @@
         updateTesterStrength(e.target.value);
       }));
 
+      // --- MASS DECRYPTION FROM FILE ---
+      function handleMassFile(file) {
+        if (!file) return;
+        if (file.type !== "text/plain" && !file.name.endsWith('.txt')) {
+          showToast("Formato file non valido. Carica un file .txt", "error");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target.result;
+          
+          massBlocks = content.split(/\r?\n\s*\r?\n/)
+            .map(block => block.trim())
+            .filter(block => block.length > 0);
+
+          if (massBlocks.length === 0) {
+            showToast("Nessun blocco di testo rilevato nel file.", "error");
+            return;
+          }
+
+          elements.massFileLabel.textContent = `File caricato: ${file.name}`;
+          elements.massPreviewArea.value = content;
+          elements.massDetectedBlocksCount.textContent = `${massBlocks.length} blocc${massBlocks.length === 1 ? 'o' : 'hi'} trovat${massBlocks.length === 1 ? 'o' : 'i'}`;
+          elements.massPreviewCard.classList.remove('hidden');
+          
+          elements.massResultsCard.classList.add('hidden');
+          massDecryptedResults = [];
+
+          showToast(`Rilevati ${massBlocks.length} blocchi cifrati.`, "success");
+        };
+        reader.readAsText(file);
+      }
+
+      elements.massFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        handleMassFile(file);
+      });
+
+      // Setup drag and drop style for mass-dropzone
+      const massDropzone = elements.massDropzone;
+      ['dragenter', 'dragover'].forEach(eventName => {
+        massDropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          massDropzone.classList.add('border-blue-500', 'bg-blue-500/10');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        massDropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          massDropzone.classList.remove('border-blue-500', 'bg-blue-500/10');
+        }, false);
+      });
+
+      massDropzone.addEventListener('drop', (e) => {
+        const file = e.dataTransfer.files[0];
+        handleMassFile(file);
+      });
+
+      elements.btnMassDecrypt.addEventListener('click', async () => {
+        const password = elements.massDecPassword.value;
+        if (!password) {
+          showToast("Inserisci la password di decifratura.", "error");
+          return;
+        }
+
+        if (massBlocks.length === 0) {
+          showToast("Carica prima un file .txt con i blocchi cifrati.", "error");
+          return;
+        }
+
+        elements.btnMassDecrypt.disabled = true;
+        const originalBtnHTML = elements.btnMassDecrypt.innerHTML;
+        elements.btnMassDecrypt.innerHTML = `<svg class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Decifratura...`;
+
+        elements.massResultsList.innerHTML = '';
+        massDecryptedResults = [];
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < massBlocks.length; i++) {
+          const rawBlock = massBlocks[i];
+          let blockResult = {
+            index: i + 1,
+            rawCiphertext: rawBlock,
+            success: false,
+            plaintext: '',
+            error: '',
+            algo: ''
+          };
+
+          try {
+            const parts = rawBlock.trim().split(':');
+            let detectedAlgo = "Sconosciuto";
+            if (parts.length === 3) {
+              try {
+                const ivBytes = new Uint8Array(base64ToArrayBuffer(parts[1]));
+                detectedAlgo = ivBytes.length === 16 ? "AES-128-CBC" : "AES-256-GCM";
+              } catch (_) {}
+            }
+
+            const decrypted = await decryptText(rawBlock, password);
+            blockResult.success = true;
+            blockResult.plaintext = decrypted;
+            blockResult.algo = detectedAlgo;
+            successCount++;
+
+            await addHistoryItem('Decifratura Massiva', decrypted.substring(0, 50) + (decrypted.length > 50 ? '...' : ''), decrypted);
+          } catch (err) {
+            blockResult.success = false;
+            blockResult.error = err.message || "Errore. Password errata o payload compromesso.";
+            failCount++;
+          }
+
+          massDecryptedResults.push(blockResult);
+          renderMassResultRow(blockResult);
+        }
+
+        elements.btnMassDecrypt.disabled = false;
+        elements.btnMassDecrypt.innerHTML = originalBtnHTML;
+
+        elements.massResultsCard.classList.remove('hidden');
+        elements.massResultsCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        if (successCount > 0) {
+          const msg = `Decifratura completata: ${successCount} successi, ${failCount} fallimenti.`;
+          showToast(msg, successCount === massBlocks.length ? "success" : "info");
+          sendSystemNotification("Decifratura Massiva Completata", msg);
+        } else {
+          showToast("Decifratura massiva fallita per tutti i blocchi.", "error");
+          sendSystemNotification("Decifratura Massiva Fallita", "Nessun blocco è stato decifrato correttamente con la password fornita.");
+        }
+      });
+
+      elements.btnCopyAllMass.addEventListener('click', () => {
+        const successfulTexts = massDecryptedResults
+          .filter(r => r.success)
+          .map(r => r.plaintext)
+          .join('\n\n');
+
+        if (!successfulTexts) {
+          showToast("Nessun testo decifrato con successo da copiare.", "error");
+          return;
+        }
+
+        navigator.clipboard.writeText(successfulTexts);
+        showToast("Tutti i testi decifrati sono stati copiati negli appunti.", "success");
+      });
+
+      elements.btnDownloadAllMass.addEventListener('click', () => {
+        const successfulTexts = massDecryptedResults
+          .filter(r => r.success)
+          .map(r => r.plaintext)
+          .join('\n\n');
+
+        if (!successfulTexts) {
+          showToast("Nessun testo decifrato con successo da scaricare.", "error");
+          return;
+        }
+
+        const blob = new Blob([successfulTexts], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'risultati_decifrati_massa.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("File dei risultati decifrati scaricato.", "success");
+      });
+
+      // --- EXPORT HISTORY CSV ACTION ---
+      elements.btnExportHistory.addEventListener('click', () => {
+        if (!AppState.history || AppState.history.length === 0) {
+          showToast("Nessun dato in cronologia da esportare.", "error");
+          return;
+        }
+
+        // CSV helper to escape values safely
+        const escapeCSVValue = (val) => {
+          if (val === undefined || val === null) return '';
+          let str = String(val);
+          str = str.replace(/"/g, '""');
+          return `"${str}"`;
+        };
+
+        // Header: ID, Timestamp, Tipo, Anteprima, Payload
+        const headers = ["ID", "Timestamp", "Tipo", "Anteprima", "Payload"];
+        const rows = [headers];
+
+        AppState.history.forEach(item => {
+          rows.push([
+            item.id || '',
+            item.timestamp || '',
+            item.type || '',
+            item.truncated || '',
+            item.payload || ''
+          ]);
+        });
+
+        const csvContent = rows.map(r => r.map(escapeCSVValue).join(',')).join('\n');
+        
+        // Add UTF-8 Byte Order Mark (BOM) to make Excel parse special characters properly
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Use nice local timestamp in name
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.download = `cronologia_operazioni_${dateStr}.csv`;
+        
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast("Cronologia esportata con successo in formato .csv", "success");
+      });
+
       // --- CLEAR HISTORY ACTION ---
       elements.btnClearHistory.addEventListener('click', async () => {
         AppState.history = [];
@@ -1509,6 +2607,227 @@
             elements.decErrorCard.classList.add('hidden');
             showToast("Campi Decifratura svuotati.", "info");
           }
+        }
+      });
+
+      // --- APP LOCK INITIALIZATION & EVENT LISTENERS ---
+      updateLockStatusUI();
+      if (isLockEnabled()) {
+        lockAppImmediate();
+      }
+
+      // App Lock Button Click
+      elements.appLockToggle.addEventListener('click', () => {
+        if (isLockEnabled()) {
+          // Open manage section
+          elements.lockSetupContainer.classList.add('hidden');
+          elements.lockManageContainer.classList.remove('hidden');
+          elements.lockModalTitle.textContent = "Gestisci Blocco App";
+          elements.lockModalDesc.textContent = "La protezione è attiva. Puoi bloccare l'app o rimuovere il blocco.";
+          elements.lockRemoveVerify.value = '';
+        } else {
+          // Open setup section
+          elements.lockSetupContainer.classList.remove('hidden');
+          elements.lockManageContainer.classList.add('hidden');
+          elements.lockModalTitle.textContent = "Configura Blocco App";
+          elements.lockModalDesc.textContent = "Proteggi l'applicazione con una password o un PIN numerico.";
+          
+          // Reset default selection to password
+          selectedLockType = 'password';
+          elements.btnLockTypePw.classList.add('bg-white/10', 'text-white');
+          elements.btnLockTypePw.classList.remove('text-gray-400', 'hover:text-white');
+          elements.btnLockTypePin.classList.remove('bg-white/10', 'text-white');
+          elements.btnLockTypePin.classList.add('text-gray-400', 'hover:text-white');
+          elements.lblLockInput.textContent = "Inserisci Password";
+          elements.lockInputVal.placeholder = "Minimo 4 caratteri...";
+          
+          elements.lockInputVal.value = '';
+          elements.lockInputConfirm.value = '';
+        }
+        elements.lockConfigModal.classList.remove('hidden');
+      });
+
+      // Close modal
+      elements.btnCloseLockModal.addEventListener('click', () => {
+        elements.lockConfigModal.classList.add('hidden');
+      });
+
+      // Type selectors
+      elements.btnLockTypePw.addEventListener('click', () => {
+        selectedLockType = 'password';
+        elements.btnLockTypePw.classList.add('bg-white/10', 'text-white');
+        elements.btnLockTypePw.classList.remove('text-gray-400', 'hover:text-white');
+        elements.btnLockTypePin.classList.remove('bg-white/10', 'text-white');
+        elements.btnLockTypePin.classList.add('text-gray-400', 'hover:text-white');
+        
+        elements.lblLockInput.textContent = "Inserisci Password";
+        elements.lockInputVal.placeholder = "Minimo 4 caratteri...";
+        elements.lockInputVal.value = '';
+        elements.lockInputConfirm.value = '';
+      });
+
+      elements.btnLockTypePin.addEventListener('click', () => {
+        selectedLockType = 'pin';
+        elements.btnLockTypePin.classList.add('bg-white/10', 'text-white');
+        elements.btnLockTypePin.classList.remove('text-gray-400', 'hover:text-white');
+        elements.btnLockTypePw.classList.remove('bg-white/10', 'text-white');
+        elements.btnLockTypePw.classList.add('text-gray-400', 'hover:text-white');
+        
+        elements.lblLockInput.textContent = "Inserisci PIN Numerico (4-6 cifre)";
+        elements.lockInputVal.placeholder = "PIN di 4 o 6 cifre...";
+        elements.lockInputVal.value = '';
+        elements.lockInputConfirm.value = '';
+      });
+
+      // Save setup
+      elements.btnSaveLock.addEventListener('click', async () => {
+        const val = elements.lockInputVal.value;
+        const confirm = elements.lockInputConfirm.value;
+        
+        if (selectedLockType === 'password') {
+          if (val.length < 4) {
+            showToast("La password deve contenere almeno 4 caratteri.", "error");
+            return;
+          }
+        } else {
+          if (!/^\d{4,6}$/.test(val)) {
+            showToast("Il PIN deve essere composto da 4 a 6 cifre numeriche.", "error");
+            return;
+          }
+        }
+        
+        if (val !== confirm) {
+          showToast("I valori inseriti non coincidono.", "error");
+          return;
+        }
+        
+        const hash = await hashPin(val);
+        localStorage.setItem('vault_lock_enabled', 'true');
+        localStorage.setItem('vault_lock_type', selectedLockType);
+        localStorage.setItem('vault_lock_hash', hash);
+        if (selectedLockType === 'pin') {
+          localStorage.setItem('vault_lock_pin_length', val.length.toString());
+        }
+        
+        elements.lockConfigModal.classList.add('hidden');
+        updateLockStatusUI();
+        showToast("Protezione dell'app attivata con successo!", "success");
+      });
+
+      // Action: Lock App Now
+      elements.btnActionLockNow.addEventListener('click', () => {
+        elements.lockConfigModal.classList.add('hidden');
+        lockAppImmediate();
+      });
+
+      // Remove Protection
+      elements.btnRemoveLock.addEventListener('click', async () => {
+        const verifyVal = elements.lockRemoveVerify.value;
+        if (!verifyVal) {
+          showToast("Inserisci la password o il PIN corrente per rimuovere la protezione.", "error");
+          return;
+        }
+        
+        const storedHash = localStorage.getItem('vault_lock_hash');
+        const storedSalt = localStorage.getItem('vault_lock_salt');
+        let isValid = false;
+
+        if (storedSalt) {
+          const hashVerify = await hashPin(verifyVal, storedSalt);
+          isValid = (hashVerify === storedHash);
+        } else {
+          const msgUint8 = new TextEncoder().encode(verifyVal);
+          const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const legacyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          isValid = (legacyHash === storedHash);
+        }
+        
+        if (isValid) {
+          localStorage.removeItem('vault_lock_enabled');
+          localStorage.removeItem('vault_lock_type');
+          localStorage.removeItem('vault_lock_hash');
+          localStorage.removeItem('vault_lock_salt');
+          sessionStorage.removeItem('vault_app_locked');
+          
+          elements.lockConfigModal.classList.add('hidden');
+          updateLockStatusUI();
+          showToast("Protezione dell'app disattivata.", "success");
+        } else {
+          showToast("Password o PIN corrente errato.", "error");
+        }
+      });
+
+      // Unlock with Password
+      elements.btnUnlockPassword.addEventListener('click', async () => {
+        const val = elements.unlockPasswordInput.value;
+        if (await verifyUnlockInput(val)) {
+          elements.appLockedOverlay.classList.add('hidden');
+          sessionStorage.removeItem('vault_app_locked');
+          showToast("Applicazione sbloccata con successo.", "success");
+        } else {
+          if (Date.now() >= AppState.lockCooldownUntil) {
+            elements.lockErrorMsg.textContent = "Password non corretta.";
+            elements.lockErrorMsg.classList.remove('hidden');
+          }
+          elements.appLockedOverlay.firstElementChild.classList.add('animate-shake');
+          setTimeout(() => {
+            elements.appLockedOverlay.firstElementChild.classList.remove('animate-shake');
+          }, 500);
+        }
+      });
+
+      elements.unlockPasswordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          elements.btnUnlockPassword.click();
+        }
+      });
+
+      // Unlock with PIN Pad
+      document.querySelectorAll('.pin-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (Date.now() < AppState.lockCooldownUntil) return;
+          const digit = btn.textContent.trim();
+          const targetLength = parseInt(localStorage.getItem('vault_lock_pin_length') || '6', 10);
+          if (elements.unlockPinInput.value.length < targetLength) {
+            elements.unlockPinInput.value += digit;
+            updatePinDotsUI();
+          }
+        });
+      });
+
+      document.getElementById('btn-pin-clear').addEventListener('click', () => {
+        if (Date.now() < AppState.lockCooldownUntil) return;
+        elements.unlockPinInput.value = '';
+        updatePinDotsUI();
+      });
+
+      document.getElementById('btn-pin-delete').addEventListener('click', () => {
+        if (Date.now() < AppState.lockCooldownUntil) return;
+        const val = elements.unlockPinInput.value;
+        if (val.length > 0) {
+          elements.unlockPinInput.value = val.substring(0, val.length - 1);
+          updatePinDotsUI();
+        }
+      });
+
+      elements.btnUnlockPin.addEventListener('click', async () => {
+        const val = elements.unlockPinInput.value;
+        if (await verifyUnlockInput(val)) {
+          elements.appLockedOverlay.classList.add('hidden');
+          sessionStorage.removeItem('vault_app_locked');
+          showToast("Applicazione sbloccata con successo.", "success");
+        } else {
+          if (Date.now() >= AppState.lockCooldownUntil) {
+            elements.lockErrorMsg.textContent = "PIN non corretto.";
+            elements.lockErrorMsg.classList.remove('hidden');
+          }
+          elements.unlockPinInput.value = '';
+          updatePinDotsUI();
+          elements.appLockedOverlay.firstElementChild.classList.add('animate-shake');
+          setTimeout(() => {
+            elements.appLockedOverlay.firstElementChild.classList.remove('animate-shake');
+          }, 500);
         }
       });
     }
