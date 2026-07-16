@@ -307,6 +307,17 @@
                   </select>
                 </div>
               </div>
+
+              <div class="space-y-1.5 pt-2 border-t border-gray-500/10">
+                <label for="enc-label" class="text-xs font-semibold tracking-wide text-gray-300 flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                  </svg>
+                  Etichetta (Opzionale)
+                </label>
+                <input type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="enc-label" class="glass-input w-full rounded-xl py-2 px-3 text-xs" placeholder="Es. Backup password, Appunti personali, etc.">
+              </div>
             </div>
           </div>
 
@@ -329,6 +340,33 @@
                   </div>
                 </div>
 
+                <div class="space-y-2 pt-2 border-t border-gray-500/10 grid grid-cols-2 gap-3">
+                  <div class="space-y-1">
+                    <label for="enc-hash" class="text-[10px] uppercase font-bold text-gray-400 block">Algoritmo Hash KDF</label>
+                    <select id="enc-hash" class="glass-input w-full rounded-xl py-1.5 px-2 text-xs">
+                      <option value="SHA-256" selected>SHA-256 (Standard)</option>
+                      <option value="SHA-512">SHA-512 (Ultra Sicuro)</option>
+                    </select>
+                  </div>
+                  <div class="space-y-1">
+                    <label for="enc-salt-size" class="text-[10px] uppercase font-bold text-gray-400 block">Dimensione Salt</label>
+                    <select id="enc-salt-size" class="glass-input w-full rounded-xl py-1.5 px-2 text-xs">
+                      <option value="16" selected>16 byte (Standard)</option>
+                      <option value="32">32 byte (Paranoico)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="space-y-2 pt-2 border-t border-gray-500/10">
+                  <label for="enc-iterations" class="text-xs font-medium block">Iterazioni KDF (PBKDF2)</label>
+                  <select id="enc-iterations" class="glass-input w-full rounded-xl py-2 px-3 text-xs">
+                    <option value="210000" selected>Standard (210.000 iterazioni)</option>
+                    <option value="600000">OWASP Consigliato (600.000 iterazioni)</option>
+                    <option value="1000000">Paranoid / Ultra (1.000.000 iterazioni)</option>
+                    <option value="100000">Rapido (100.000 iterazioni)</option>
+                  </select>
+                </div>
+
                 <div class="space-y-2 pt-2 border-t border-gray-500/10">
                   <div class="flex justify-between text-xs font-medium">
                     <span>Robustezza Password</span>
@@ -337,7 +375,7 @@
                   <div class="w-full bg-gray-500/15 h-2 rounded-full overflow-hidden">
                     <div id="enc-entropy-bar" class="w-0 h-full bg-red-500 transition-all duration-300"></div>
                   </div>
-                  <p class="text-[10px] text-gray-400" id="enc-entropy-desc">Derivazione: PBKDF2 con 100k iterazioni.</p>
+                  <p class="text-[10px] text-gray-400" id="enc-entropy-desc">Derivazione: PBKDF2 con <span id="lbl-iterations" class="font-bold text-emerald-400">210k</span> iterazioni.</p>
                 </div>
               </div>
 
@@ -487,7 +525,7 @@
                   <span>Lunghezza Password</span>
                   <span id="lbl-gen-len" class="font-mono font-bold text-indigo-400">16 caratteri</span>
                 </div>
-                <input type="range" id="gen-len" min="8" max="64" value="16" class="w-full accent-indigo-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                <input type="range" id="gen-len" min="8" max="512" value="16" class="w-full accent-indigo-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer">
               </div>
 
               <div class="grid grid-cols-2 gap-3 pt-2">
@@ -734,7 +772,7 @@
         </div>
         <div>
           <h3 id="lock-modal-title" class="text-lg font-bold text-white">Configura Blocco App</h3>
-          <p id="lock-modal-desc" class="text-xs text-gray-400">Proteggi l'applicazione con una password o un PIN numerico.</p>
+          <p id="lock-modal-desc" class="text-[11px] text-gray-400">Proteggi l'app con password o PIN. <b>Nota:</b> il blocco nasconde solo l'interfaccia. I dati sono protetti dalla chiave di sessione (eliminata alla chiusura).</p>
         </div>
       </div>
 
@@ -775,6 +813,16 @@
                 </svg>
               </button>
             </div>
+          <div class="space-y-1.5 pt-2 border-t border-gray-500/10">
+            <label for="lock-auto-timeout-setup" class="text-xs text-gray-400 font-medium">Auto-blocco per Inattività</label>
+            <select id="lock-auto-timeout-setup" class="glass-input w-full rounded-xl py-2.5 px-3 text-xs">
+              <option value="1">1 minuto</option>
+              <option value="3">3 minuti</option>
+              <option value="5" selected>5 minuti (Consigliato)</option>
+              <option value="15">15 minuti</option>
+              <option value="30">30 minuti</option>
+              <option value="0">Mai (Disattivato)</option>
+            </select>
           </div>
         </div>
 
@@ -806,6 +854,37 @@
             </svg>
             Blocca App Ora
           </button>
+
+          <!-- Inactivity Auto-Lock Settings Section -->
+          <div class="border-t border-gray-500/10 my-3 pt-3 space-y-1.5">
+            <label for="lock-auto-timeout-manage" class="text-xs font-semibold text-gray-300">Auto-blocco per Inattività</label>
+            <p class="text-[11px] text-gray-400">Tempo di inattività prima di bloccare automaticamente l'app.</p>
+            <select id="lock-auto-timeout-manage" class="glass-input w-full rounded-xl py-2 px-3 text-xs mt-1">
+              <option value="1">1 minuto</option>
+              <option value="3">3 minuti</option>
+              <option value="5">5 minuti (Consigliato)</option>
+              <option value="15">15 minuti</option>
+              <option value="30">30 minuti</option>
+              <option value="0">Mai (Disattivato)</option>
+            </select>
+          </div>
+
+          <!-- Biometric Lock Configuration Section -->
+          <div id="biometric-setup-section" class="border-t border-gray-500/10 my-3 pt-3 space-y-2.5">
+            <h4 class="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 11c0-1.1-.9-2-2-2s-2 .9-2 2"></path>
+                <path d="M12 7c0-2.2-1.8-4-4-4S4 4.8 4 7c0 .5.4.9.9.9s.9-.4.9-.9c0-1.1.9-2 2-2s2 .9 2 2c0 .5.4.9.9.9s.9-.4.9-.9z"></path>
+                <path d="M14 11c0-2.2-1.8-4-4-4s-4 1.8-4 4c0 .5.4.9.9.9s.9-.4.9-.9c0-1.1.9-2 2-2s2 .9 2 2c0 .5.4.9.9.9s.9-.4.9-.9z"></path>
+                <path d="M16 11c0-3.3-2.7-6-6-6S4 7.7 4 11c0 .5.4.9.9.9s.9-.4.9-.9c0-2.2 1.8-4 4-4s4 1.8 4 4c0 .5.4.9.9.9s.9-.4.9-.9z"></path>
+              </svg>
+              Sblocco Biometrico (WebAuthn)
+            </h4>
+            <p id="biometric-status-desc" class="text-[11px] text-gray-400">Verifica la disponibilità dei dati biometrici (impronta digitale o riconoscimento del volto) sul dispositivo.</p>
+            <button id="btn-toggle-biometrics" class="w-full py-2.5 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer">
+              Abilita Sblocco Biometrico
+            </button>
+          </div>
 
           <div class="border-t border-gray-500/10 my-3 pt-3">
             <h4 class="text-xs font-semibold text-gray-300 mb-2">Rimuovi Protezione</h4>
@@ -913,6 +992,20 @@
         </button>
       </div>
 
+      <!-- Biometric unlocking container (visible only if WebAuthn is configured) -->
+      <div id="unlock-biometric-container" class="hidden space-y-4 pt-2 border-t border-gray-500/10">
+        <button id="btn-unlock-biometric" class="w-full py-3.5 px-4 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 hover:text-white border border-indigo-500/30 font-bold text-sm tracking-wide transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-lg shadow-indigo-500/10">
+          <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M12 11c0-1.1-.9-2-2-2s-2 .9-2 2"></path>
+            <path d="M12 7c0-2.2-1.8-4-4-4S4 4.8 4 7c0 .5.4.9.9.9s.9-.4.9-.9c0-1.1.9-2 2-2s2 .9 2 2c0 .5.4.9.9.9s.9-.4.9-.9z"></path>
+            <path d="M14 11c0-2.2-1.8-4-4-4s-4 1.8-4 4c0 .5.4.9.9.9s.9-.4.9-.9c0-1.1.9-2 2-2s2 .9 2 2c0 .5.4.9.9.9s.9-.4.9-.9z"></path>
+            <path d="M16 11c0-3.3-2.7-6-6-6S4 7.7 4 11c0 .5.4.9.9.9s.9-.4.9-.9c0-2.2 1.8-4 4-4s4 1.8 4 4c0 .5.4.9.9.9s.9-.4.9-.9z"></path>
+            <path d="M18 11c0-4.4-3.6-8-8-8s-8 3.6-8 8c0 .5.4.9.9.9s.9-.4.9-.9c0-3.3 2.7-6 6-6s6 2.7 6 6c0 .5.4.9.9.9s.9-.4.9-.9z"></path>
+          </svg>
+          Sblocca con Biometria / WebAuthn
+        </button>
+      </div>
+
     </div>
   </div>
 
@@ -954,10 +1047,15 @@
       encPlaintext: document.getElementById('enc-plaintext'),
       encCharCount: document.getElementById('enc-char-count'),
       encPassword: document.getElementById('enc-password'),
+      encLabel: document.getElementById('enc-label'),
       encPasswordWarning: document.getElementById('enc-password-warning'),
       encKeyLen: document.getElementById('enc-key-len'),
       lblKeyLen: document.getElementById('lbl-key-len'),
       encAlgo: document.getElementById('enc-algo'),
+      encHash: document.getElementById('enc-hash'),
+      encSaltSize: document.getElementById('enc-salt-size'),
+      encIterations: document.getElementById('enc-iterations'),
+      lblIterations: document.getElementById('lbl-iterations'),
       encEntropyLabel: document.getElementById('enc-entropy-label'),
       encEntropyBar: document.getElementById('enc-entropy-bar'),
       btnEncrypt: document.getElementById('btn-encrypt'),
@@ -1030,7 +1128,9 @@
       lockInputVal: document.getElementById('lock-input-val'),
       lockInputConfirm: document.getElementById('lock-input-confirm'),
       btnSaveLock: document.getElementById('btn-save-lock'),
+      lockAutoTimeoutSetup: document.getElementById('lock-auto-timeout-setup'),
       lockManageContainer: document.getElementById('lock-manage-container'),
+      lockAutoTimeoutManage: document.getElementById('lock-auto-timeout-manage'),
       btnActionLockNow: document.getElementById('btn-action-lock-now'),
       lockRemoveVerify: document.getElementById('lock-remove-verify'),
       btnRemoveLock: document.getElementById('btn-remove-lock'),
@@ -1041,7 +1141,14 @@
       btnUnlockPassword: document.getElementById('btn-unlock-password'),
       unlockPinContainer: document.getElementById('unlock-pin-container'),
       unlockPinInput: document.getElementById('unlock-pin-input'),
-      btnUnlockPin: document.getElementById('btn-unlock-pin')
+      btnUnlockPin: document.getElementById('btn-unlock-pin'),
+
+      // WebAuthn Biometric Lock elements
+      biometricSetupSection: document.getElementById('biometric-setup-section'),
+      btnToggleBiometrics: document.getElementById('btn-toggle-biometrics'),
+      biometricStatusDesc: document.getElementById('biometric-status-desc'),
+      unlockBiometricContainer: document.getElementById('unlock-biometric-container'),
+      btnUnlockBiometric: document.getElementById('btn-unlock-biometric')
     };
 
     // -------------------------------------------------------------------------
@@ -1237,7 +1344,7 @@
     // -------------------------------------------------------------------------
     // CRITTOGRAFIA: Web Crypto API AES-GCM/AES-CBC + PBKDF2
     // -------------------------------------------------------------------------
-    async function deriveKeyFromPassword(password, saltBytes, keyLengthBits, algoType = "AES-GCM", iterations = 210000) {
+    async function deriveKeyFromPassword(password, saltBytes, keyLengthBits, algoType = "AES-GCM", iterations = 210000, hashAlgo = "SHA-256") {
       const pwBytes = new TextEncoder().encode(password);
       
       // Import password as PBKDF2 base key
@@ -1252,13 +1359,13 @@
       // Securely zero-out plaintext password bytes in memory immediately after importing
       pwBytes.fill(0);
 
-      // Derive AES key with given iterations
+      // Derive AES key with given iterations and hash algorithm
       return await window.crypto.subtle.deriveKey(
         {
           name: "PBKDF2",
           salt: saltBytes,
           iterations: iterations,
-          hash: "SHA-256"
+          hash: hashAlgo
         },
         baseKey,
         { name: algoType, length: keyLengthBits },
@@ -1267,14 +1374,14 @@
       );
     }
 
-    async function encryptText(plaintext, password, keyLengthBits, algoName = "AES-GCM") {
-      // 1. Generate unique 16 bytes salt & IV (12 bytes for GCM, 16 bytes for CBC)
-      const saltBytes = window.crypto.getRandomValues(new Uint8Array(16));
+    async function encryptText(plaintext, password, keyLengthBits, algoName = "AES-GCM", iterations = 210000, hashAlgo = "SHA-256", saltSize = 16) {
+      // 1. Generate unique 16 or 32 bytes salt & IV (12 bytes for GCM, 16 bytes for CBC)
+      const saltBytes = window.crypto.getRandomValues(new Uint8Array(saltSize));
       const ivSize = algoName === "AES-CBC" ? 16 : 12;
       const ivBytes = window.crypto.getRandomValues(new Uint8Array(ivSize));
 
       // 2. Derive Key
-      const key = await deriveKeyFromPassword(password, saltBytes, keyLengthBits, algoName);
+      const key = await deriveKeyFromPassword(password, saltBytes, keyLengthBits, algoName, iterations, hashAlgo);
 
       // 3. Encrypt Plaintext
       const encodedPlaintext = new TextEncoder().encode(plaintext);
@@ -1295,13 +1402,14 @@
       const ivB64 = arrayBufferToBase64(ivBytes);
       const ciphertextB64 = arrayBufferToBase64(ciphertextBuffer);
 
-      return `${saltB64}:${ivB64}:${ciphertextB64}`;
+      // Save iterations and hashAlgo in the payload for dynamic, forward-compatible decryption
+      return `${saltB64}:${ivB64}:${ciphertextB64}:${iterations}:${hashAlgo}`;
     }
 
     async function decryptText(payload, password, algoName = null) {
       const parts = payload.trim().split(':');
-      if (parts.length !== 3) {
-        throw new Error("Formato non valido. Deve essere 'salt:iv:ciphertext'.");
+      if (parts.length < 3 || parts.length > 5) {
+        throw new Error("Formato non valido. Deve essere 'salt:iv:ciphertext' o contenere parametri aggiuntivi.");
       }
 
       const saltBytes = new Uint8Array(base64ToArrayBuffer(parts[0]));
@@ -1316,39 +1424,51 @@
 
       // Try the selected algorithm first
       const algosToTry = selectedAlgo === "AES-CBC" 
-        ? [{ name: "AES-CBC", keyLengths: [128] }, { name: "AES-GCM", keyLengths: [256, 128, 192] }]
-        : [{ name: "AES-GCM", keyLengths: [256, 128, 192] }, { name: "AES-CBC", keyLengths: [128] }];
+        ? [{ name: "AES-CBC", keyLengths: [256, 128, 192] }, { name: "AES-GCM", keyLengths: [256, 128, 192] }]
+        : [{ name: "AES-GCM", keyLengths: [256, 128, 192] }, { name: "AES-CBC", keyLengths: [256, 128, 192] }];
 
       let lastError = null;
-      const iterationsToTry = [210000, 100000];
+      
+      // If iterations / hash are stored in payload, use them. Otherwise, try standard fallback iterations.
+      let iterationsToTry = [210000, 100000];
+      let hashAlgoToTry = ["SHA-256", "SHA-512"];
+      
+      if (parts.length >= 4) {
+        iterationsToTry = [parseInt(parts[3], 10)];
+      }
+      if (parts.length === 5) {
+        hashAlgoToTry = [parts[4]];
+      }
 
       for (const algo of algosToTry) {
         for (const bitLength of algo.keyLengths) {
           for (const iter of iterationsToTry) {
-            try {
-              const key = await deriveKeyFromPassword(password, saltBytes, bitLength, algo.name, iter);
-              const decryptedBuffer = await window.crypto.subtle.decrypt(
-                {
-                  name: algo.name,
-                  iv: ivBytes
-                },
-                key,
-                ciphertextBuffer
-              );
-              
-              // Update UI dropdown to match the successfully decrypted algorithm
-              if (elements.decAlgo && algo.name !== elements.decAlgo.value) {
-                elements.decAlgo.value = algo.name;
+            for (const hashAlgo of hashAlgoToTry) {
+              try {
+                const key = await deriveKeyFromPassword(password, saltBytes, bitLength, algo.name, iter, hashAlgo);
+                const decryptedBuffer = await window.crypto.subtle.decrypt(
+                  {
+                    name: algo.name,
+                    iv: ivBytes
+                  },
+                  key,
+                  ciphertextBuffer
+                );
+                
+                // Update UI dropdown to match the successfully decrypted algorithm
+                if (elements.decAlgo && algo.name !== elements.decAlgo.value) {
+                  elements.decAlgo.value = algo.name;
+                }
+                
+                const decryptedText = new TextDecoder().decode(decryptedBuffer);
+                
+                // Securely zero-out decrypted buffer memory
+                new Uint8Array(decryptedBuffer).fill(0);
+                
+                return decryptedText;
+              } catch (e) {
+                lastError = e;
               }
-              
-              const decryptedText = new TextDecoder().decode(decryptedBuffer);
-              
-              // Securely zero-out decrypted buffer memory
-              new Uint8Array(decryptedBuffer).fill(0);
-              
-              return decryptedText;
-            } catch (e) {
-              lastError = e;
             }
           }
         }
@@ -1473,6 +1593,41 @@
       }, 3500);
     }
 
+    // Secure clipboard helper with auto-clear
+    let clipboardClearTimeout = null;
+    let clipboardExpectedValue = null;
+
+    async function copyToClipboardSecurely(text, description) {
+      try {
+        await navigator.clipboard.writeText(text);
+        clipboardExpectedValue = text;
+        
+        if (clipboardClearTimeout) {
+          clearTimeout(clipboardClearTimeout);
+        }
+        
+        showToast(`${description} copiato negli appunti. Verrà rimosso automaticamente per sicurezza tra 30 secondi.`, "info");
+        
+        clipboardClearTimeout = setTimeout(async () => {
+          try {
+            const currentClipboard = await navigator.clipboard.readText().catch(() => null);
+            if (currentClipboard === null || currentClipboard === clipboardExpectedValue) {
+              await navigator.clipboard.writeText("");
+              showToast("Appunti svuotati per motivi di sicurezza.", "info");
+            }
+          } catch (err) {
+            await navigator.clipboard.writeText("").catch(() => {});
+            showToast("Appunti svuotati per motivi di sicurezza.", "info");
+          }
+          clipboardExpectedValue = null;
+          clipboardClearTimeout = null;
+        }, 30000);
+      } catch (err) {
+        console.error("Errore di copia:", err);
+        showToast("Impossibile copiare negli appunti.", "error");
+      }
+    }
+
     // -------------------------------------------------------------------------
     // APP FLOW: Local History Persistence
     // -------------------------------------------------------------------------
@@ -1489,7 +1644,7 @@
       }
     }
 
-    async function addHistoryItem(type, text, payload) {
+    async function addHistoryItem(type, text, payload, label = "") {
       const timestamp = new Date().toLocaleString('it-IT');
       const truncated = text.length > 50 ? text.substring(0, 50) + "..." : text;
       
@@ -1498,7 +1653,8 @@
         timestamp,
         type,
         truncated,
-        payload
+        payload,
+        label: label || ""
       });
 
       // Keep only top 10
@@ -1533,6 +1689,7 @@
           <div class="space-y-1 max-w-xl">
             <div class="flex items-center gap-2">
               <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${badgeColor}">${item.type}</span>
+              ${item.label ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/20 max-w-[150px] truncate" title="${escapeHTML(item.label)}">${escapeHTML(item.label)}</span>` : ''}
               <span class="text-gray-400 text-[10px] font-mono">${item.timestamp}</span>
             </div>
             <p class="font-mono text-[11px] text-gray-300 break-all select-all">${escapeHTML(item.truncated)}</p>
@@ -1720,6 +1877,7 @@
       // Clean inputs/outputs
       elements.encPlaintext.value = '';
       elements.encPassword.value = '';
+      if (elements.encLabel) elements.encLabel.value = '';
       elements.encOutput.value = '';
       elements.encCharCount.textContent = '0 caratteri';
       elements.encOutputCard.classList.add('hidden');
@@ -1734,6 +1892,23 @@
       elements.calcBits.textContent = '0.0 bit';
       elements.calcRating.textContent = 'Vuota';
       elements.calcBruteforce.textContent = 'N/D';
+
+      // Clean Mass Decryption variables & UI
+      massBlocks = [];
+      massDecryptedResults = [];
+      if (elements.massDecPassword) elements.massDecPassword.value = '';
+      if (elements.massPreviewArea) elements.massPreviewArea.value = '';
+      if (elements.massFileLabel) elements.massFileLabel.textContent = 'Nessun file selezionato';
+      if (elements.massDetectedBlocksCount) elements.massDetectedBlocksCount.textContent = '0 blocchi trovati';
+      if (elements.massPreviewCard) elements.massPreviewCard.classList.add('hidden');
+      if (elements.massResultsCard) elements.massResultsCard.classList.add('hidden');
+      if (elements.massResultsList) elements.massResultsList.innerHTML = '';
+
+      // Clean Entropy history tracking & chart
+      AppState.entropyHistory = [];
+      if (chartRenderer) {
+        chartRenderer.update([]);
+      }
 
       updatePasswordStrength('');
       updateTesterStrength('');
@@ -1909,10 +2084,14 @@
 
     async function hashPin(pin, saltHex = null) {
       let saltBytes;
+      let iterations = parseInt(localStorage.getItem('vault_lock_iterations') || '50000', 10);
       if (saltHex) {
         // Convert hex back to bytes
         saltBytes = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
       } else {
+        // For new setups or password updates, upgrade security to 300,000 PBKDF2 iterations
+        iterations = 300000;
+        localStorage.setItem('vault_lock_iterations', '300000');
         saltBytes = window.crypto.getRandomValues(new Uint8Array(16));
         const newSaltHex = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
         localStorage.setItem('vault_lock_salt', newSaltHex);
@@ -1934,7 +2113,7 @@
         {
           name: "PBKDF2",
           salt: saltBytes,
-          iterations: 50000,
+          iterations: iterations,
           hash: "SHA-256"
         },
         baseKey,
@@ -2019,6 +2198,14 @@
     }
 
     function updateLockStatusUI() {
+      if (elements.lockAutoTimeoutSetup) {
+        const autoTimeout = localStorage.getItem('vault_lock_auto_timeout') || '5';
+        elements.lockAutoTimeoutSetup.value = autoTimeout;
+        if (elements.lockAutoTimeoutManage) {
+          elements.lockAutoTimeoutManage.value = autoTimeout;
+        }
+      }
+
       if (isLockEnabled()) {
         elements.lockIconUnlocked.classList.add('hidden');
         elements.lockIconLocked.classList.remove('hidden');
@@ -2030,8 +2217,38 @@
       }
     }
 
+    let autoLockTimer = null;
+    function resetAutoLockTimer() {
+      if (autoLockTimer) clearTimeout(autoLockTimer);
+      if (!isLockEnabled()) return;
+      if (sessionStorage.getItem('vault_app_locked') === 'true') return;
+      
+      const timeoutVal = parseInt(localStorage.getItem('vault_lock_auto_timeout') || '5', 10);
+      if (timeoutVal > 0) {
+        autoLockTimer = setTimeout(() => {
+          lockAppImmediate();
+        }, timeoutVal * 60000);
+      }
+    }
+
+    // Monitor user activity to reset auto-lock
+    function setupActivityListeners() {
+      const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+      let throttleTimer = null;
+      const handleActivity = () => {
+        if (!throttleTimer) {
+          throttleTimer = setTimeout(() => {
+            resetAutoLockTimer();
+            throttleTimer = null;
+          }, 1000); // throttle resets to at most once per second
+        }
+      };
+      events.forEach(e => document.addEventListener(e, handleActivity, { passive: true }));
+    }
+
     function lockAppImmediate() {
       if (!isLockEnabled()) return;
+      if (autoLockTimer) clearTimeout(autoLockTimer);
       
       // Mark as locked in session so it remains locked upon manual or auto locking
       sessionStorage.setItem('vault_app_locked', 'true');
@@ -2053,6 +2270,17 @@
         elements.unlockPinContainer.classList.add('hidden');
         // Delay to ensure visibility is applied before focusing
         setTimeout(() => elements.unlockPasswordInput.focus(), 150);
+      }
+
+      // Handle Biometric lock presentation
+      if (isBiometricUnlockEnabled()) {
+        elements.unlockBiometricContainer.classList.remove('hidden');
+        // Automatically request biometrics for instant, frictionless sbloccare
+        setTimeout(() => {
+          authenticateBiometrics();
+        }, 400);
+      } else {
+        elements.unlockBiometricContainer.classList.add('hidden');
       }
     }
 
@@ -2078,6 +2306,192 @@
           dot.classList.add('hidden');
         }
       });
+    }
+
+    // --- WEBAUTHN / BIOMETRIC LOCK SYSTEM ---
+    function isWebAuthnSupported() {
+      return !!(window.PublicKeyCredential && navigator.credentials);
+    }
+
+    async function isPlatformBiometricsAvailable() {
+      if (!isWebAuthnSupported()) return false;
+      try {
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      } catch (e) {
+        console.warn("isUserVerifyingPlatformAuthenticatorAvailable checking failed:", e);
+        return false;
+      }
+    }
+
+    function isBiometricUnlockEnabled() {
+      return localStorage.getItem('vault_webauthn_enabled') === 'true' && isLockEnabled();
+    }
+
+    async function updateBiometricSetupUI() {
+      if (!elements.biometricSetupSection) return;
+
+      const supported = isWebAuthnSupported();
+      if (!supported) {
+        elements.biometricStatusDesc.textContent = "Tecnologia WebAuthn non supportata da questo browser.";
+        elements.biometricStatusDesc.classList.add('text-red-400');
+        elements.biometricStatusDesc.classList.remove('text-gray-400', 'text-emerald-400');
+        elements.btnToggleBiometrics.disabled = true;
+        elements.btnToggleBiometrics.classList.add('opacity-50', 'cursor-not-allowed');
+        elements.btnToggleBiometrics.textContent = "Non Supportato";
+        return;
+      }
+
+      const available = await isPlatformBiometricsAvailable();
+      if (!available) {
+        elements.biometricStatusDesc.textContent = "Dispositivo biometrico (impronta/volto) non configurato o non disponibile.";
+        elements.biometricStatusDesc.classList.add('text-amber-400');
+        elements.biometricStatusDesc.classList.remove('text-gray-400', 'text-emerald-400', 'text-red-400');
+        elements.btnToggleBiometrics.disabled = true;
+        elements.btnToggleBiometrics.classList.add('opacity-50', 'cursor-not-allowed');
+        elements.btnToggleBiometrics.textContent = "Biometria non disponibile";
+        return;
+      }
+
+      // WebAuthn supported and platform biometric active!
+      elements.btnToggleBiometrics.disabled = false;
+      elements.btnToggleBiometrics.classList.remove('opacity-50', 'cursor-not-allowed');
+
+      if (isBiometricUnlockEnabled()) {
+        elements.biometricStatusDesc.textContent = "Lo sblocco biometrico tramite WebAuthn è attivo ed è configurato.";
+        elements.biometricStatusDesc.classList.add('text-emerald-400');
+        elements.biometricStatusDesc.classList.remove('text-gray-400', 'text-amber-400', 'text-red-400');
+        
+        elements.btnToggleBiometrics.textContent = "Disattiva Sblocco Biometrico";
+        elements.btnToggleBiometrics.className = "w-full py-2.5 px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer";
+      } else {
+        elements.biometricStatusDesc.textContent = "Sblocca l'applicazione utilizzando dati biometrici (impronta digitale o riconoscimento volto) come alternativa a PIN/Password.";
+        elements.biometricStatusDesc.classList.add('text-gray-400');
+        elements.biometricStatusDesc.classList.remove('text-emerald-400', 'text-amber-400', 'text-red-400');
+
+        elements.btnToggleBiometrics.textContent = "Abilita Sblocco Biometrico";
+        elements.btnToggleBiometrics.className = "w-full py-2.5 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer";
+      }
+    }
+
+    async function registerBiometrics() {
+      try {
+        if (!isWebAuthnSupported()) {
+          showToast("WebAuthn non supportato su questo browser.", "error");
+          return;
+        }
+
+        const isAvail = await isPlatformBiometricsAvailable();
+        if (!isAvail) {
+          showToast("Dati biometrici di sistema non disponibili.", "error");
+          return;
+        }
+
+        showToast("In attesa di autenticazione biometrica dal dispositivo...", "info");
+
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+        
+        const userId = new Uint8Array(16);
+        window.crypto.getRandomValues(userId);
+
+        const rpId = window.location.hostname || "localhost";
+
+        const publicKeyCredentialCreationOptions = {
+          challenge: challenge,
+          rp: {
+            name: "CryptoVault",
+            id: rpId
+          },
+          user: {
+            id: userId,
+            name: "user@cryptovault",
+            displayName: "Utente CryptoVault"
+          },
+          pubKeyCredParams: [
+            { type: "public-key", alg: -7 },   // ES256 (P-256)
+            { type: "public-key", alg: -256 },  // RS256
+            { type: "public-key", alg: -257 }   // RS256 / SHA-256
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: "platform",
+            userVerification: "required",
+            residentKey: "preferred"
+          },
+          timeout: 60000
+        };
+
+        const credential = await navigator.credentials.create({
+          publicKey: publicKeyCredentialCreationOptions
+        });
+
+        if (credential) {
+          localStorage.setItem('vault_webauthn_enabled', 'true');
+          const credentialIdB64 = arrayBufferToBase64(credential.rawId);
+          localStorage.setItem('vault_webauthn_credential_id', credentialIdB64);
+          showToast("Sblocco biometrico attivato con successo!", "success");
+          await updateBiometricSetupUI();
+        }
+      } catch (err) {
+        console.error("WebAuthn Registration Error:", err);
+        if (err.name === 'NotAllowedError') {
+          showToast("Configurazione biometrica annullata o timeout.", "warning");
+        } else {
+          showToast("Errore registrazione biometrica: " + err.message, "error");
+        }
+      }
+    }
+
+    async function authenticateBiometrics() {
+      try {
+        if (!isBiometricUnlockEnabled()) return false;
+        
+        const credentialIdB64 = localStorage.getItem('vault_webauthn_credential_id');
+        if (!credentialIdB64) {
+          showToast("Configurazione biometrica corrotta. Sincronizzazione in corso...", "error");
+          localStorage.removeItem('vault_webauthn_enabled');
+          return false;
+        }
+
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+
+        const rpId = window.location.hostname || "localhost";
+        
+        const allowCredentials = [{
+          id: base64ToArrayBuffer(credentialIdB64),
+          type: 'public-key'
+        }];
+
+        const publicKeyCredentialRequestOptions = {
+          challenge: challenge,
+          rpId: rpId,
+          allowCredentials: allowCredentials,
+          userVerification: "required",
+          timeout: 60000
+        };
+
+        const assertion = await navigator.credentials.get({
+          publicKey: publicKeyCredentialRequestOptions
+        });
+
+        if (assertion) {
+          elements.appLockedOverlay.classList.add('hidden');
+          sessionStorage.removeItem('vault_app_locked');
+          resetAutoLockTimer();
+          showToast("Applicazione sbloccata con dati biometrici.", "success");
+          AppState.failedLockAttempts = 0;
+          AppState.lockCooldownUntil = 0;
+          return true;
+        }
+      } catch (err) {
+        console.error("WebAuthn Authentication Error:", err);
+        if (err.name === 'NotAllowedError') {
+          showToast("Sblocco biometrico annullato.", "warning");
+        } else {
+          showToast("Errore durante lo sblocco biometrico: " + err.message, "error");
+        }
+      }
+      return false;
     }
 
     // -------------------------------------------------------------------------
@@ -2159,13 +2573,20 @@
 
       // Toggle Password Visibility Eye-Slash
       document.querySelectorAll('.btn-toggle-pw').forEach(btn => {
+        btn.setAttribute('title', 'Mostra password');
         btn.addEventListener('click', (e) => {
           const input = btn.previousElementSibling;
           if (input.type === 'password') {
             input.type = 'text';
+            btn.setAttribute('title', 'Nascondi password');
+            btn.classList.add('text-amber-400');
+            btn.classList.remove('text-gray-400', 'hover:text-white');
             btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
           } else {
             input.type = 'password';
+            btn.setAttribute('title', 'Mostra password');
+            btn.classList.remove('text-amber-400');
+            btn.classList.add('text-gray-400', 'hover:text-white');
             btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
           }
         });
@@ -2187,16 +2608,17 @@
         elements.lblKeyLen.textContent = `${e.target.value} bit`;
       });
 
+      // KDF Iterations dropdown change
+      elements.encIterations.addEventListener('change', (e) => {
+        const val = parseInt(e.target.value, 10);
+        elements.lblIterations.textContent = `${(val / 1000).toFixed(0)}k`;
+      });
+
       // Algorithm change handler to manage Key Length constraints
       elements.encAlgo.addEventListener('change', (e) => {
-        if (e.target.value === 'AES-CBC') {
-          elements.encKeyLen.value = '128';
-          elements.encKeyLen.disabled = true;
-          elements.lblKeyLen.textContent = '128 bit';
-        } else {
-          elements.encKeyLen.disabled = false;
-          elements.lblKeyLen.textContent = `${elements.encKeyLen.value} bit`;
-        }
+        // Both AES-GCM and AES-CBC fully support 128, 192, and 256 bit keys in Web Crypto API
+        elements.encKeyLen.disabled = false;
+        elements.lblKeyLen.textContent = `${elements.encKeyLen.value} bit`;
       });
 
       // --- PRIMARY ENCRYPT ACTION ---
@@ -2205,6 +2627,7 @@
         const pw = elements.encPassword.value;
         const keySize = parseInt(elements.encKeyLen.value);
         const algo = elements.encAlgo.value;
+        const iterations = parseInt(elements.encIterations.value, 10);
 
         if (!text) {
           showToast("Inserisci del testo in chiaro da cifrare.", "error");
@@ -2220,7 +2643,8 @@
         elements.btnEncrypt.innerHTML = `<svg class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Cifratura...`;
 
         try {
-          const payload = await encryptText(text, pw, keySize, algo);
+          const payload = await encryptText(text, pw, keySize, algo, iterations);
+          const label = elements.encLabel ? elements.encLabel.value.trim() : "";
           
           await registerUsedPassword(pw);
           
@@ -2231,7 +2655,7 @@
           elements.encOutputCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           
           // Save in History
-          await addHistoryItem('Cifratura', text, payload);
+          await addHistoryItem('Cifratura', text, payload, label);
           showToast("Testo cifrato generato in sicurezza.", "success");
         } catch (e) {
           console.error(e);
@@ -2594,6 +3018,7 @@
           if (AppState.activeTab === 'encrypt') {
             elements.encPlaintext.value = '';
             elements.encPassword.value = '';
+            if (elements.encLabel) elements.encLabel.value = '';
             elements.encOutput.value = '';
             elements.encCharCount.textContent = '0 caratteri';
             elements.encOutputCard.classList.add('hidden');
@@ -2612,6 +3037,9 @@
 
       // --- APP LOCK INITIALIZATION & EVENT LISTENERS ---
       updateLockStatusUI();
+      setupActivityListeners();
+      resetAutoLockTimer();
+      
       if (isLockEnabled()) {
         lockAppImmediate();
       }
@@ -2625,6 +3053,7 @@
           elements.lockModalTitle.textContent = "Gestisci Blocco App";
           elements.lockModalDesc.textContent = "La protezione è attiva. Puoi bloccare l'app o rimuovere il blocco.";
           elements.lockRemoveVerify.value = '';
+          updateBiometricSetupUI();
         } else {
           // Open setup section
           elements.lockSetupContainer.classList.remove('hidden');
@@ -2709,10 +3138,25 @@
           localStorage.setItem('vault_lock_pin_length', val.length.toString());
         }
         
+        const autoTimeout = elements.lockAutoTimeoutSetup ? elements.lockAutoTimeoutSetup.value : "5";
+        localStorage.setItem('vault_lock_auto_timeout', autoTimeout);
+        if (elements.lockAutoTimeoutManage) {
+          elements.lockAutoTimeoutManage.value = autoTimeout;
+        }
+        
         elements.lockConfigModal.classList.add('hidden');
         updateLockStatusUI();
+        resetAutoLockTimer();
         showToast("Protezione dell'app attivata con successo!", "success");
       });
+
+      if (elements.lockAutoTimeoutManage) {
+        elements.lockAutoTimeoutManage.addEventListener('change', (e) => {
+          localStorage.setItem('vault_lock_auto_timeout', e.target.value);
+          resetAutoLockTimer();
+          showToast("Impostazioni di auto-blocco aggiornate.", "success");
+        });
+      }
 
       // Action: Lock App Now
       elements.btnActionLockNow.addEventListener('click', () => {
@@ -2748,6 +3192,11 @@
           localStorage.removeItem('vault_lock_type');
           localStorage.removeItem('vault_lock_hash');
           localStorage.removeItem('vault_lock_salt');
+          localStorage.removeItem('vault_lock_iterations');
+          localStorage.removeItem('vault_lock_pin_length');
+          localStorage.removeItem('vault_lock_auto_timeout');
+          localStorage.removeItem('vault_webauthn_enabled');
+          localStorage.removeItem('vault_webauthn_credential_id');
           sessionStorage.removeItem('vault_app_locked');
           
           elements.lockConfigModal.classList.add('hidden');
@@ -2764,6 +3213,7 @@
         if (await verifyUnlockInput(val)) {
           elements.appLockedOverlay.classList.add('hidden');
           sessionStorage.removeItem('vault_app_locked');
+          resetAutoLockTimer();
           showToast("Applicazione sbloccata con successo.", "success");
         } else {
           if (Date.now() >= AppState.lockCooldownUntil) {
@@ -2816,6 +3266,7 @@
         if (await verifyUnlockInput(val)) {
           elements.appLockedOverlay.classList.add('hidden');
           sessionStorage.removeItem('vault_app_locked');
+          resetAutoLockTimer();
           showToast("Applicazione sbloccata con successo.", "success");
         } else {
           if (Date.now() >= AppState.lockCooldownUntil) {
@@ -2829,6 +3280,25 @@
             elements.appLockedOverlay.firstElementChild.classList.remove('animate-shake');
           }, 500);
         }
+      });
+
+      // Biometric / WebAuthn Setup Toggle Action
+      elements.btnToggleBiometrics.addEventListener('click', async () => {
+        if (isBiometricUnlockEnabled()) {
+          // Disable biometric sblocco
+          localStorage.removeItem('vault_webauthn_enabled');
+          localStorage.removeItem('vault_webauthn_credential_id');
+          showToast("Sblocco biometrico disattivato.", "info");
+          await updateBiometricSetupUI();
+        } else {
+          // Enable biometric sblocco
+          await registerBiometrics();
+        }
+      });
+
+      // Biometric Unlock Overlay Action
+      elements.btnUnlockBiometric.addEventListener('click', async () => {
+        await authenticateBiometrics();
       });
     }
 
