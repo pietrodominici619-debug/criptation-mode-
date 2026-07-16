@@ -1,0 +1,6 @@
+{
+  "name": "CryptoVault",
+  "description": "Una web app moderna e sicura per la cifratura e decifratura di testi e password, completamente lato client.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

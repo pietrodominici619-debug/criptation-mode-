@@ -1,0 +1,1520 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CryptoVault - Cifratura & Decifratura Locale</title>
+  <style>
+    @import "tailwindcss";
+
+    /* Custom CSS variables for theme management & glassmorphism */
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% 0%, #151518 0%, #0a0a0c 100%);
+      --card-bg: rgba(21, 21, 24, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --input-bg: rgba(0, 0, 0, 0.25);
+      --input-border: rgba(255, 255, 255, 0.08);
+      --shadow-color: rgba(0, 0, 0, 0.6);
+      --accent-encrypt: #10b981;
+      --accent-decrypt: #f43f5e;
+      --accent-utility: #3b82f6;
+    }
+
+    [data-theme="light"] {
+      --bg-gradient: radial-gradient(circle at 50% 0%, #ffffff 0%, #f1f5f9 100%);
+      --card-bg: rgba(255, 255, 255, 0.9);
+      --card-border: rgba(0, 0, 0, 0.08);
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --input-bg: rgba(248, 250, 252, 0.9);
+      --input-border: rgba(0, 0, 0, 0.1);
+      --shadow-color: rgba(0, 0, 0, 0.05);
+      --accent-encrypt: #059669;
+      --accent-decrypt: #dc2626;
+      --accent-utility: #2563eb;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      transition: background 0.3s ease, color 0.3s ease;
+      min-height: 100vh;
+    }
+
+    .glass-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px -10px var(--shadow-color);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glass-input {
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      color: var(--text-main);
+      transition: all 0.2s ease;
+    }
+
+    .glass-input:focus {
+      border-color: var(--accent-utility);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Highlight themes for specific sections */
+    .encrypt-focus:focus-within {
+      border-color: var(--accent-encrypt);
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+
+    .decrypt-focus:focus-within {
+      border-color: var(--accent-decrypt);
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
+
+    /* Tab transitions */
+    .tab-content {
+      display: none;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Drag over styles */
+    .drag-over {
+      border: 2px dashed var(--accent-encrypt) !important;
+      background: rgba(16, 185, 129, 0.1) !important;
+    }
+
+    .drag-over-decrypt {
+      border: 2px dashed var(--accent-decrypt) !important;
+      background: rgba(239, 68, 68, 0.1) !important;
+    }
+
+    /* Scrollbar style */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.3);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(156, 163, 175, 0.5);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="p-3 sm:p-6 md:p-8">
+
+  <div class="max-w-5xl mx-auto space-y-6">
+    <!-- HEADER -->
+    <header class="glass-card rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-white" style="color: var(--text-main);">CryptoVault</h1>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-block mt-0.5">
+            100% Lato Client / Offline
+          </span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4">
+        <!-- Inactivity countdown -->
+        <div class="flex items-center gap-2 text-xs text-gray-400 bg-gray-500/5 px-3 py-2 rounded-xl border border-gray-500/10">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="cleanup-dot"></span>
+          <span id="cleanup-timer">Sicurezza attiva: 05:00</span>
+          <button id="btn-manual-cleanup" class="ml-1 text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer" title="Svuota memoria immediamente">Pulisci ora</button>
+        </div>
+
+        <!-- Light/Dark Toggle -->
+        <button id="theme-toggle" class="p-2.5 rounded-xl bg-gray-500/10 text-gray-400 hover:text-white hover:bg-gray-500/20 transition-all cursor-pointer" aria-label="Cambia tema">
+          <svg id="theme-icon-dark" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg id="theme-icon-light" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- PRIVACY ALERT BANNER -->
+    <div class="glass-card rounded-2xl p-4 border-l-4 border-l-emerald-500 flex items-start gap-3">
+      <div class="text-emerald-500 mt-0.5 shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+      </div>
+      <div>
+        <h4 class="text-sm font-semibold text-white" style="color: var(--text-main);">I tuoi dati non lasciano mai il browser</h4>
+        <p class="text-xs text-gray-400 mt-0.5">Tutta la cifratura e derivazione delle chiavi avvengono in locale tramite le Web Crypto API. Nessun testo o password viene mai trasmesso su internet.</p>
+      </div>
+    </div>
+
+    <!-- MAIN TABS MENU -->
+    <nav class="flex overflow-x-auto gap-2 p-1 bg-gray-500/5 rounded-2xl border border-gray-500/10">
+      <button data-tab="encrypt" class="tab-btn flex-1 py-3 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer bg-emerald-500/15 text-emerald-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        Cifratura
+      </button>
+      <button data-tab="decrypt" class="tab-btn flex-1 py-3 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-gray-400 hover:text-white">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          <circle cx="12" cy="16" r="1"></circle>
+        </svg>
+        Decifratura
+      </button>
+      <button data-tab="tools" class="tab-btn flex-1 py-3 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-gray-400 hover:text-white">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+        </svg>
+        Strumenti
+      </button>
+      <button data-tab="history" class="tab-btn flex-1 py-3 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-gray-400 hover:text-white">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        Cronologia
+      </button>
+    </nav>
+
+    <!-- CONTENT SECTIONS -->
+    <main>
+      <!-- TAB: ENCRYPT -->
+      <section id="tab-encrypt" class="tab-content active space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Inputs (2 Cols) -->
+          <div class="lg:col-span-2 space-y-4">
+            <div class="glass-card rounded-2xl p-5 space-y-4 encrypt-focus border-t-2 border-t-emerald-500">
+              <div class="flex items-center justify-between">
+                <label for="enc-plaintext" class="text-sm font-semibold tracking-wide">Testo in chiaro</label>
+                <span class="text-xs text-gray-400" id="enc-char-count">0 caratteri</span>
+              </div>
+              <textarea id="enc-plaintext" class="glass-input w-full h-44 rounded-xl p-3.5 text-base sm:text-sm resize-none" placeholder="Inserisci o trascina (.txt) qui il testo che desideri cifrare..."></textarea>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label for="enc-password" class="text-sm font-medium">Password di derivazione</label>
+                  <div class="relative">
+                    <input type="password" id="enc-password" class="glass-input w-full rounded-xl py-2.5 pl-3.5 pr-10 text-base sm:text-sm" placeholder="Password robusta...">
+                    <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-gray-400 hover:text-white">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5">
+                  <label for="enc-algo" class="text-sm font-medium">Algoritmo</label>
+                  <select id="enc-algo" class="glass-input w-full rounded-xl py-2.5 px-3.5 text-base sm:text-sm">
+                    <option value="AES-GCM" selected>AES-256-GCM (Sincrono)</option>
+                    <option value="AES-CBC">AES-128-CBC (Sincrono)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Key Length & Entropy (1 Col) -->
+          <div class="space-y-4">
+            <div class="glass-card rounded-2xl p-5 space-y-5 h-full flex flex-col justify-between">
+              <div class="space-y-4">
+                <h3 class="text-sm font-semibold tracking-wide">Parametri di sicurezza</h3>
+                
+                <div class="space-y-2">
+                  <div class="flex justify-between text-xs font-medium">
+                    <span>Lunghezza chiave AES</span>
+                    <span id="lbl-key-len" class="text-emerald-400 font-semibold">256 bit</span>
+                  </div>
+                  <input type="range" id="enc-key-len" min="128" max="256" step="64" value="256" class="w-full accent-emerald-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                  <div class="flex justify-between text-[10px] text-gray-500 font-mono">
+                    <span>128-bit</span>
+                    <span>192-bit</span>
+                    <span>256-bit</span>
+                  </div>
+                </div>
+
+                <div class="space-y-2 pt-2 border-t border-gray-500/10">
+                  <div class="flex justify-between text-xs font-medium">
+                    <span>Robustezza Password</span>
+                    <span id="enc-entropy-label" class="text-red-400 font-semibold">Vuota</span>
+                  </div>
+                  <div class="w-full bg-gray-500/15 h-2 rounded-full overflow-hidden">
+                    <div id="enc-entropy-bar" class="w-0 h-full bg-red-500 transition-all duration-300"></div>
+                  </div>
+                  <p class="text-[10px] text-gray-400" id="enc-entropy-desc">Derivazione: PBKDF2 con 100k iterazioni.</p>
+                </div>
+              </div>
+
+              <button id="btn-encrypt" class="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold text-sm tracking-wide transition-all shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer mt-4">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Cifra Testo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output section -->
+        <div id="enc-output-card" class="glass-card rounded-2xl p-5 space-y-4 border-l-4 border-l-emerald-500 hidden">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold tracking-wide flex items-center gap-2 text-emerald-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Cifratura completata
+            </h3>
+            <span class="text-[10px] font-mono text-gray-400 bg-gray-500/10 px-2 py-0.5 rounded">salt:iv:ciphertext</span>
+          </div>
+          <textarea id="enc-output" class="glass-input w-full h-32 rounded-xl p-3 text-xs font-mono resize-none bg-gray-500/5" readonly></textarea>
+          <div class="flex flex-wrap gap-2 justify-end">
+            <button id="btn-copy-enc" class="py-2 px-4 rounded-lg bg-gray-500/10 hover:bg-gray-500/20 text-xs font-medium transition-all flex items-center gap-2 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copia
+            </button>
+            <button id="btn-download-enc" class="py-2 px-4 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold border border-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Scarica .txt
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: DECRYPT -->
+      <section id="tab-decrypt" class="tab-content space-y-6">
+        <div class="glass-card rounded-2xl p-5 space-y-4 decrypt-focus border-t-2 border-t-red-500">
+          <div class="flex items-center justify-between">
+            <label for="dec-ciphertext" class="text-sm font-semibold tracking-wide">Testo Cifrato (Base64)</label>
+            <span class="text-[10px] text-gray-500 font-mono">formato salt:iv:ciphertext</span>
+          </div>
+          <textarea id="dec-ciphertext" class="glass-input w-full h-36 rounded-xl p-3.5 text-base sm:text-xs font-mono resize-none" placeholder="Inserisci o trascina (.txt) il payload cifrato generato in precedenza..."></textarea>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div class="space-y-1.5">
+              <label for="dec-password" class="text-sm font-medium">Password di decifratura</label>
+              <div class="relative">
+                <input type="password" id="dec-password" class="glass-input w-full rounded-xl py-2.5 pl-3.5 pr-10 text-base sm:text-sm" placeholder="Inserisci la password...">
+                <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-gray-400 hover:text-white">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <label for="dec-algo" class="text-sm font-medium">Algoritmo</label>
+              <select id="dec-algo" class="glass-input w-full rounded-xl py-2.5 px-3.5 text-base sm:text-sm">
+                <option value="AES-GCM" selected>AES-256-GCM (Sincrono)</option>
+                <option value="AES-CBC">AES-128-CBC (Sincrono)</option>
+              </select>
+            </div>
+
+            <button id="btn-decrypt" class="w-full py-3 px-4 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-sm tracking-wide transition-all shadow-lg shadow-red-500/10 flex items-center justify-center gap-2 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                <circle cx="12" cy="16" r="1"></circle>
+              </svg>
+              Decifra Testo
+            </button>
+          </div>
+        </div>
+
+        <!-- Output Decrypted -->
+        <div id="dec-output-card" class="glass-card rounded-2xl p-5 space-y-4 border-l-4 border-l-red-500 hidden">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold tracking-wide flex items-center gap-2 text-red-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Decifratura completata con successo
+            </h3>
+          </div>
+          <textarea id="dec-output" class="glass-input w-full h-40 rounded-xl p-3.5 text-sm resize-none bg-gray-500/5" readonly></textarea>
+          <div class="flex justify-end">
+            <button id="btn-copy-dec" class="py-2 px-4 rounded-lg bg-gray-500/10 hover:bg-gray-500/20 text-xs font-medium transition-all flex items-center gap-2 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copia Testo Decifrato
+            </button>
+          </div>
+        </div>
+
+        <!-- Decrypt Error Panel -->
+        <div id="dec-error-card" class="glass-card rounded-2xl p-4 bg-red-500/5 border border-red-500/20 text-red-400 text-xs flex items-start gap-3 hidden animate-shake">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <div>
+            <span class="font-bold">Errore di Decifratura:</span>
+            <p id="dec-error-msg" class="mt-0.5 opacity-90">Impossibile decifrare. Assicurati che la password sia corretta e che il payload non sia corrotto o alterato.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: TOOLS -->
+      <section id="tab-tools" class="tab-content space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Password Generator -->
+          <div class="glass-card rounded-2xl p-5 space-y-4 border-t-2 border-t-indigo-500">
+            <h3 class="text-base font-semibold tracking-wide">Generatore Password Sicure</h3>
+            
+            <div class="space-y-4 bg-gray-500/5 p-4 rounded-xl border border-gray-500/10">
+              <div class="flex items-center justify-between">
+                <span id="gen-pw-output" class="font-mono text-sm break-all font-semibold select-all text-indigo-300">Genera per iniziare...</span>
+                <button id="btn-copy-gen" class="p-2 rounded-lg bg-gray-500/10 hover:bg-gray-500/20 text-gray-400 hover:text-white shrink-0 cursor-pointer" title="Copia password">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-3.5">
+              <div class="space-y-2">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>Lunghezza Password</span>
+                  <span id="lbl-gen-len" class="font-mono font-bold text-indigo-400">16 caratteri</span>
+                </div>
+                <input type="range" id="gen-len" min="8" max="64" value="16" class="w-full accent-indigo-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 pt-2">
+                <label class="flex items-center gap-2.5 text-xs text-gray-300 cursor-pointer">
+                  <input type="checkbox" id="chk-lower" checked class="w-4 h-4 accent-indigo-500 rounded">
+                  <span>Minuscole (a-z)</span>
+                </label>
+                <label class="flex items-center gap-2.5 text-xs text-gray-300 cursor-pointer">
+                  <input type="checkbox" id="chk-upper" checked class="w-4 h-4 accent-indigo-500 rounded">
+                  <span>Maiuscole (A-Z)</span>
+                </label>
+                <label class="flex items-center gap-2.5 text-xs text-gray-300 cursor-pointer">
+                  <input type="checkbox" id="chk-numbers" checked class="w-4 h-4 accent-indigo-500 rounded">
+                  <span>Numeri (0-9)</span>
+                </label>
+                <label class="flex items-center gap-2.5 text-xs text-gray-300 cursor-pointer">
+                  <input type="checkbox" id="chk-symbols" checked class="w-4 h-4 accent-indigo-500 rounded">
+                  <span>Simboli (!@#...)</span>
+                </label>
+              </div>
+
+              <button id="btn-generate" class="w-full py-2.5 px-4 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-slate-900 font-bold text-xs tracking-wider uppercase transition-all shadow-lg shadow-indigo-500/10 flex items-center justify-center gap-2 cursor-pointer pt-3">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                </svg>
+                Genera Password
+              </button>
+            </div>
+          </div>
+
+          <!-- Entropy Calculator -->
+          <div class="glass-card rounded-2xl p-5 space-y-4 border-t-2 border-t-indigo-500">
+            <h3 class="text-base font-semibold tracking-wide">Analisi dell'Entropia in Tempo Reale</h3>
+            
+            <div class="space-y-3">
+              <label for="entropy-tester" class="text-xs text-gray-400">Verifica la robustezza di qualsiasi password</label>
+              <div class="relative">
+                <input type="password" id="entropy-tester" class="glass-input w-full rounded-xl py-2.5 pl-3.5 pr-10 text-base sm:text-sm" placeholder="Digita una password...">
+                <button type="button" class="btn-toggle-pw absolute right-3 top-2.5 text-gray-400 hover:text-white">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Stats Output -->
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <div class="p-3 rounded-xl bg-gray-500/5 border border-gray-500/10">
+                <span class="text-[10px] text-gray-400 block uppercase font-semibold">Entropia Bit</span>
+                <span id="calc-bits" class="text-lg font-mono font-bold">0.0 bit</span>
+              </div>
+              <div class="p-3 rounded-xl bg-gray-500/5 border border-gray-500/10">
+                <span class="text-[10px] text-gray-400 block uppercase font-semibold">Robustezza</span>
+                <span id="calc-rating" class="text-sm font-bold block mt-1 text-red-400">Vuota</span>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-gray-500/5 border border-gray-500/10 space-y-1">
+              <span class="text-[10px] text-gray-400 block uppercase font-semibold">Tempo stimato di Brute Force (10 GH/s)</span>
+              <span id="calc-bruteforce" class="text-sm font-semibold font-mono text-indigo-300">N/D</span>
+              <span class="text-[9px] text-gray-500 block">Stima calcolata ipotizzando un supercomputer da 10 miliardi di tentativi al secondo.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: HISTORY -->
+      <section id="tab-history" class="tab-content space-y-6">
+        <div class="glass-card rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-semibold tracking-wide">Cronologia Operazioni</h3>
+              <p class="text-xs text-gray-400 mt-0.5">Ultimi 10 testi cifrati in questa sessione. Cifrati in sicurezza nel localStorage.</p>
+            </div>
+            <button id="btn-clear-history" class="py-2 px-3.5 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-semibold cursor-pointer transition-all">
+              Cancella tutto
+            </button>
+          </div>
+
+          <div id="history-empty" class="py-12 flex flex-col items-center justify-center text-center space-y-3">
+            <div class="p-3 rounded-2xl bg-gray-500/5 text-gray-500">
+              <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div class="space-y-1">
+              <h4 class="text-sm font-medium text-gray-300">Cronologia vuota</h4>
+              <p class="text-xs text-gray-500 max-w-xs">Esegui una cifratura per salvare automaticamente il record.</p>
+            </div>
+          </div>
+
+          <div id="history-list" class="divide-y divide-gray-500/10 space-y-3.5 hidden">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="text-center text-[11px] text-gray-500 py-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+      <span>&copy; 2026 CryptoVault - Tutti i diritti riservati.</span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        Zero Cookie traccianti &bull; Zero Server Analytics
+      </span>
+    </footer>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"></div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script type="module">
+    // Core Application State
+    const AppState = {
+      activeTab: 'encrypt',
+      theme: 'dark',
+      history: [],
+      autoCleanSeconds: 300,
+      timerInterval: null,
+      sessionKey: null
+    };
+
+    // DOM References
+    const elements = {
+      tabButtons: document.querySelectorAll('.tab-btn'),
+      tabContents: document.querySelectorAll('.tab-content'),
+      themeToggle: document.getElementById('theme-toggle'),
+      themeIconDark: document.getElementById('theme-icon-dark'),
+      themeIconLight: document.getElementById('theme-icon-light'),
+      
+      // Cleanup Timer
+      cleanupTimer: document.getElementById('cleanup-timer'),
+      cleanupDot: document.getElementById('cleanup-dot'),
+      btnManualCleanup: document.getElementById('btn-manual-cleanup'),
+
+      // Encrypt tab
+      encPlaintext: document.getElementById('enc-plaintext'),
+      encCharCount: document.getElementById('enc-char-count'),
+      encPassword: document.getElementById('enc-password'),
+      encKeyLen: document.getElementById('enc-key-len'),
+      lblKeyLen: document.getElementById('lbl-key-len'),
+      encAlgo: document.getElementById('enc-algo'),
+      encEntropyLabel: document.getElementById('enc-entropy-label'),
+      encEntropyBar: document.getElementById('enc-entropy-bar'),
+      btnEncrypt: document.getElementById('btn-encrypt'),
+      encOutputCard: document.getElementById('enc-output-card'),
+      encOutput: document.getElementById('enc-output'),
+      btnCopyEnc: document.getElementById('btn-copy-enc'),
+      btnDownloadEnc: document.getElementById('btn-download-enc'),
+
+      // Decrypt tab
+      decCiphertext: document.getElementById('dec-ciphertext'),
+      decPassword: document.getElementById('dec-password'),
+      decAlgo: document.getElementById('dec-algo'),
+      btnDecrypt: document.getElementById('btn-decrypt'),
+      decOutputCard: document.getElementById('dec-output-card'),
+      decOutput: document.getElementById('dec-output'),
+      btnCopyDec: document.getElementById('btn-copy-dec'),
+      decErrorCard: document.getElementById('dec-error-card'),
+      decErrorMsg: document.getElementById('dec-error-msg'),
+
+      // Password tools tab
+      genPwOutput: document.getElementById('gen-pw-output'),
+      btnCopyGen: document.getElementById('btn-copy-gen'),
+      genLen: document.getElementById('gen-len'),
+      lblGenLen: document.getElementById('lbl-gen-len'),
+      chkLower: document.getElementById('chk-lower'),
+      chkUpper: document.getElementById('chk-upper'),
+      chkNumbers: document.getElementById('chk-numbers'),
+      chkSymbols: document.getElementById('chk-symbols'),
+      btnGenerate: document.getElementById('btn-generate'),
+      
+      // Entropy tester
+      entropyTester: document.getElementById('entropy-tester'),
+      calcBits: document.getElementById('calc-bits'),
+      calcRating: document.getElementById('calc-rating'),
+      calcBruteforce: document.getElementById('calc-bruteforce'),
+
+      // History tab
+      historyEmpty: document.getElementById('history-empty'),
+      historyList: document.getElementById('history-list'),
+      btnClearHistory: document.getElementById('btn-clear-history')
+    };
+
+    // -------------------------------------------------------------------------
+    // UTILITY: Base64 ArrayBuffer conversions (pure JS, offline-friendly)
+    // -------------------------------------------------------------------------
+    function arrayBufferToBase64(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return window.btoa(binary);
+    }
+
+    function base64ToArrayBuffer(base64) {
+      const binary = window.atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // SECURITY: Secure session storage-based history key (Military-grade local privacy)
+    // -------------------------------------------------------------------------
+    async function getSessionKey() {
+      if (AppState.sessionKey) return AppState.sessionKey;
+
+      let keyB64 = sessionStorage.getItem('cv_session_key');
+      if (!keyB64) {
+        const rawKey = window.crypto.getRandomValues(new Uint8Array(32));
+        keyB64 = arrayBufferToBase64(rawKey);
+        sessionStorage.setItem('cv_session_key', keyB64);
+      }
+      
+      const rawKeyBytes = base64ToArrayBuffer(keyB64);
+      AppState.sessionKey = await window.crypto.subtle.importKey(
+        "raw",
+        rawKeyBytes,
+        { name: "AES-GCM" },
+        false,
+        ["encrypt", "decrypt"]
+      );
+      return AppState.sessionKey;
+    }
+
+    async function encryptHistory(historyObj) {
+      try {
+        const key = await getSessionKey();
+        const jsonStr = JSON.stringify(historyObj);
+        const encoded = new TextEncoder().encode(jsonStr);
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const encrypted = await window.crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: iv },
+          key,
+          encoded
+        );
+        
+        const ivB64 = arrayBufferToBase64(iv);
+        const ciphertextB64 = arrayBufferToBase64(encrypted);
+        return `${ivB64}:${ciphertextB64}`;
+      } catch (e) {
+        console.error("Errore salvataggio cronologia cifrata:", e);
+        return null;
+      }
+    }
+
+    async function decryptHistory(encryptedData) {
+      if (!encryptedData) return [];
+      try {
+        const parts = encryptedData.split(':');
+        if (parts.length !== 2) return [];
+        
+        const iv = new Uint8Array(base64ToArrayBuffer(parts[0]));
+        const ciphertext = base64ToArrayBuffer(parts[1]);
+        
+        const key = await getSessionKey();
+        const decrypted = await window.crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: iv },
+          key,
+          ciphertext
+        );
+        
+        const jsonStr = new TextDecoder().decode(decrypted);
+        return JSON.parse(jsonStr);
+      } catch (e) {
+        console.warn("Impossibile decifrare cronologia. Probabilmente la sessione è scaduta o differente. Resetting...", e);
+        return [];
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // CRITTOGRAFIA: Web Crypto API AES-GCM/AES-CBC + PBKDF2
+    // -------------------------------------------------------------------------
+    async function deriveKeyFromPassword(password, saltBytes, keyLengthBits, algoType = "AES-GCM") {
+      const pwBytes = new TextEncoder().encode(password);
+      
+      // Import password as PBKDF2 base key
+      const baseKey = await window.crypto.subtle.importKey(
+        "raw",
+        pwBytes,
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+      );
+
+      // Derive AES key with 100,000 iterations
+      return await window.crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt: saltBytes,
+          iterations: 100000,
+          hash: "SHA-256"
+        },
+        baseKey,
+        { name: algoType, length: keyLengthBits },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function encryptText(plaintext, password, keyLengthBits, algoName = "AES-GCM") {
+      // 1. Generate unique 16 bytes salt & IV (12 bytes for GCM, 16 bytes for CBC)
+      const saltBytes = window.crypto.getRandomValues(new Uint8Array(16));
+      const ivSize = algoName === "AES-CBC" ? 16 : 12;
+      const ivBytes = window.crypto.getRandomValues(new Uint8Array(ivSize));
+
+      // 2. Derive Key
+      const key = await deriveKeyFromPassword(password, saltBytes, keyLengthBits, algoName);
+
+      // 3. Encrypt Plaintext
+      const encodedPlaintext = new TextEncoder().encode(plaintext);
+      const ciphertextBuffer = await window.crypto.subtle.encrypt(
+        {
+          name: algoName,
+          iv: ivBytes
+        },
+        key,
+        encodedPlaintext
+      );
+
+      // 4. Encode each block to Base64 and join with colon
+      const saltB64 = arrayBufferToBase64(saltBytes);
+      const ivB64 = arrayBufferToBase64(ivBytes);
+      const ciphertextB64 = arrayBufferToBase64(ciphertextBuffer);
+
+      return `${saltB64}:${ivB64}:${ciphertextB64}`;
+    }
+
+    async function decryptText(payload, password, algoName = null) {
+      const parts = payload.trim().split(':');
+      if (parts.length !== 3) {
+        throw new Error("Formato non valido. Deve essere 'salt:iv:ciphertext'.");
+      }
+
+      const saltBytes = new Uint8Array(base64ToArrayBuffer(parts[0]));
+      const ivBytes = new Uint8Array(base64ToArrayBuffer(parts[1]));
+      const ciphertextBuffer = base64ToArrayBuffer(parts[2]);
+
+      // Determine algorithm based on selected algoName, or auto-detect based on IV length
+      let selectedAlgo = algoName;
+      if (!selectedAlgo) {
+        selectedAlgo = ivBytes.length === 16 ? "AES-CBC" : "AES-GCM";
+      }
+
+      // Try the selected algorithm first
+      const algosToTry = selectedAlgo === "AES-CBC" 
+        ? [{ name: "AES-CBC", keyLengths: [128] }, { name: "AES-GCM", keyLengths: [256, 128, 192] }]
+        : [{ name: "AES-GCM", keyLengths: [256, 128, 192] }, { name: "AES-CBC", keyLengths: [128] }];
+
+      let lastError = null;
+
+      for (const algo of algosToTry) {
+        for (const bitLength of algo.keyLengths) {
+          try {
+            const key = await deriveKeyFromPassword(password, saltBytes, bitLength, algo.name);
+            const decryptedBuffer = await window.crypto.subtle.decrypt(
+              {
+                name: algo.name,
+                iv: ivBytes
+              },
+              key,
+              ciphertextBuffer
+            );
+            
+            // Update UI dropdown to match the successfully decrypted algorithm
+            if (elements.decAlgo && algo.name !== elements.decAlgo.value) {
+              elements.decAlgo.value = algo.name;
+            }
+            return new TextDecoder().decode(decryptedBuffer);
+          } catch (e) {
+            lastError = e;
+          }
+        }
+      }
+      throw lastError || new Error("Decifratura fallita. Password non corretta o payload compromesso.");
+    }
+
+    // -------------------------------------------------------------------------
+    // SECURITY UTILITIES: Password Entropy & Brute Force Calculation
+    // -------------------------------------------------------------------------
+    function calculateEntropy(password) {
+      if (!password) return { entropy: 0, poolSize: 0 };
+      const len = password.length;
+      let poolSize = 0;
+
+      const patterns = {
+        lowercase: /[a-z]/,
+        uppercase: /[A-Z]/,
+        digits: /[0-9]/,
+        symbols: /[^a-zA-Z0-9]/
+      };
+
+      if (patterns.lowercase.test(password)) poolSize += 26;
+      if (patterns.uppercase.test(password)) poolSize += 26;
+      if (patterns.digits.test(password)) poolSize += 10;
+      if (patterns.symbols.test(password)) poolSize += 33; // Approx ASCII symbol count
+
+      if (poolSize === 0) return { entropy: 0, poolSize: 0 };
+      const entropy = len * Math.log2(poolSize);
+      return { entropy, poolSize };
+    }
+
+    function getBruteForceTime(entropy) {
+      if (entropy === 0) return "N/D";
+      const totalCombinations = Math.pow(2, entropy);
+      const guessesPerSecond = 1e10; // 10 Giga-guesses per second (supercomputer rig)
+      const seconds = totalCombinations / guessesPerSecond;
+
+      if (seconds < 1) return "< 1 millisecondo";
+      if (seconds < 60) return `${seconds.toFixed(2)} secondi`;
+      const minutes = seconds / 60;
+      if (minutes < 60) return `${minutes.toFixed(0)} minuti`;
+      const hours = minutes / 60;
+      if (hours < 24) return `${hours.toFixed(0)} ore`;
+      const days = hours / 24;
+      if (days < 365) return `${days.toFixed(0)} giorni`;
+      const years = days / 365;
+      if (years < 100) return `${years.toFixed(0)} anni`;
+      const centuries = years / 100;
+      if (centuries < 10) return `${centuries.toFixed(0)} secoli`;
+      if (centuries < 1e4) return `${(centuries/10).toFixed(0)} millenni`;
+      if (centuries < 1e7) return "Milioni di anni";
+      return "Praticamente eterno (supera l'età dell'universo)";
+    }
+
+    function getStrengthDetails(entropy) {
+      if (entropy === 0) return { label: "Vuota", color: "text-red-400", bg: "bg-red-500", width: "0%" };
+      if (entropy < 40) return { label: "Molto debole (insicura)", color: "text-red-400", bg: "bg-red-500", width: "20%" };
+      if (entropy < 60) return { label: "Debole", color: "text-orange-400", bg: "bg-orange-500", width: "40%" };
+      if (entropy < 80) return { label: "Buona", color: "text-yellow-400", bg: "bg-yellow-500", width: "65%" };
+      if (entropy < 100) return { label: "Forte (sicura)", color: "text-emerald-400", bg: "bg-emerald-500", width: "85%" };
+      return { label: "Inviolabile / Militare", color: "text-indigo-400", bg: "bg-indigo-500", width: "100%" };
+    }
+
+    // -------------------------------------------------------------------------
+    // UTILITY: Cryptographically Secure Random Password Generator
+    // -------------------------------------------------------------------------
+    function generateSecurePassword(length, options) {
+      let charset = "";
+      if (options.lower) charset += "abcdefghijklmnopqrstuvwxyz";
+      if (options.upper) charset += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      if (options.numbers) charset += "0123456789";
+      if (options.symbols) charset += "!@#$%^&*()_+-=[]{}|;':\",./<>?";
+
+      if (charset === "") return "";
+
+      const bytes = new Uint32Array(length);
+      window.crypto.getRandomValues(bytes);
+      let result = "";
+      for (let i = 0; i < length; i++) {
+        result += charset[bytes[i] % charset.length];
+      }
+      return result;
+    }
+
+    // -------------------------------------------------------------------------
+    // TOAST NOTIFICATIONS
+    // -------------------------------------------------------------------------
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `p-3.5 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-semibold select-none pointer-events-auto border transform translate-y-2 opacity-0 transition-all duration-300 ${
+        type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+        type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+        'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+      }`;
+
+      // Toast Icon SVG
+      let icon = '';
+      if (type === 'success') {
+        icon = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+      } else if (type === 'error') {
+        icon = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+      } else {
+        icon = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+      }
+
+      toast.innerHTML = `${icon}<span>${escapeHTML(message)}</span>`;
+      const container = document.getElementById('toast-container');
+      container.appendChild(toast);
+
+      // Force reflow and animate
+      requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+      });
+
+      // Remove toast
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(2px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // -------------------------------------------------------------------------
+    // APP FLOW: Local History Persistence
+    // -------------------------------------------------------------------------
+    async function loadHistory() {
+      const encrypted = localStorage.getItem('cryptovault_history');
+      AppState.history = await decryptHistory(encrypted);
+      renderHistory();
+    }
+
+    async function saveHistory() {
+      const encrypted = await encryptHistory(AppState.history);
+      if (encrypted) {
+        localStorage.setItem('cryptovault_history', encrypted);
+      }
+    }
+
+    async function addHistoryItem(type, text, payload) {
+      const timestamp = new Date().toLocaleString('it-IT');
+      const truncated = text.length > 50 ? text.substring(0, 50) + "..." : text;
+      
+      AppState.history.unshift({
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        timestamp,
+        type,
+        truncated,
+        payload
+      });
+
+      // Keep only top 10
+      if (AppState.history.length > 10) {
+        AppState.history = AppState.history.slice(0, 10);
+      }
+
+      await saveHistory();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      if (!elements.historyList) return;
+
+      if (AppState.history.length === 0) {
+        elements.historyEmpty.classList.remove('hidden');
+        elements.historyList.classList.add('hidden');
+        return;
+      }
+
+      elements.historyEmpty.classList.add('hidden');
+      elements.historyList.classList.remove('hidden');
+      elements.historyList.innerHTML = '';
+
+      AppState.history.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'py-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs';
+        
+        const badgeColor = item.type === 'Cifratura' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-400';
+        
+        div.innerHTML = `
+          <div class="space-y-1 max-w-xl">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${badgeColor}">${item.type}</span>
+              <span class="text-gray-400 text-[10px] font-mono">${item.timestamp}</span>
+            </div>
+            <p class="font-mono text-[11px] text-gray-300 break-all select-all">${escapeHTML(item.truncated)}</p>
+          </div>
+          <div class="flex gap-1.5 shrink-0 w-full sm:w-auto justify-end">
+            <button class="btn-restore py-1.5 px-2.5 rounded bg-gray-500/10 hover:bg-gray-500/20 text-gray-300 hover:text-white cursor-pointer transition-all" data-id="${item.id}">
+              Carica
+            </button>
+            <button class="btn-delete-item py-1.5 px-2.5 rounded hover:bg-red-500/15 text-gray-500 hover:text-red-400 cursor-pointer transition-all" data-id="${item.id}">
+              Elimina
+            </button>
+          </div>
+        `;
+
+        elements.historyList.appendChild(div);
+      });
+
+      // Attach dynamic listeners
+      elements.historyList.querySelectorAll('.btn-restore').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          const item = AppState.history.find(x => x.id === id);
+          if (item) {
+            if (item.type === 'Cifratura') {
+              elements.decCiphertext.value = item.payload;
+              switchTab('decrypt');
+              showToast("Testo cifrato caricato nella tab di Decifratura.", "info");
+            } else {
+              elements.encPlaintext.value = item.payload;
+              switchTab('encrypt');
+              showToast("Testo in chiaro caricato nella tab di Cifratura.", "info");
+            }
+          }
+        });
+      });
+
+      elements.historyList.querySelectorAll('.btn-delete-item').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          AppState.history = AppState.history.filter(x => x.id !== id);
+          await saveHistory();
+          renderHistory();
+          showToast("Elemento rimosso dalla cronologia.", "info");
+        });
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // TAB MANAGEMENT
+    // -------------------------------------------------------------------------
+    function switchTab(tabId) {
+      AppState.activeTab = tabId;
+      
+      // Update Menu Buttons
+      elements.tabButtons.forEach(btn => {
+        const id = btn.getAttribute('data-tab');
+        if (id === tabId) {
+          btn.className = `tab-btn flex-1 py-3 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            tabId === 'encrypt' ? 'bg-emerald-500/15 text-emerald-400' :
+            tabId === 'decrypt' ? 'bg-red-500/15 text-red-400' :
+            tabId === 'tools' ? 'bg-indigo-500/15 text-indigo-400' :
+            'bg-gray-500/15 text-white'
+          }`;
+        } else {
+          btn.className = "tab-btn flex-1 py-3 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-gray-400 hover:text-white";
+        }
+      });
+
+      // Update Section Visibility
+      elements.tabContents.forEach(content => {
+        const id = content.id.replace('tab-', '');
+        if (id === tabId) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // SECURITY UTILITY: Auto Memory Cleanup & Countdown
+    // -------------------------------------------------------------------------
+    function resetCleanupTimer() {
+      AppState.autoCleanSeconds = 300; // Reset to 5 minutes
+      updateCleanupUI();
+    }
+
+    function updateCleanupUI() {
+      const min = Math.floor(AppState.autoCleanSeconds / 60).toString().padStart(2, '0');
+      const sec = (AppState.autoCleanSeconds % 60).toString().padStart(2, '0');
+      elements.cleanupTimer.textContent = `Sicurezza attiva: ${min}:${sec}`;
+      
+      // Visual indicator changes based on remaining time
+      if (AppState.autoCleanSeconds < 60) {
+        elements.cleanupDot.className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
+        elements.cleanupTimer.classList.add('text-red-400');
+      } else if (AppState.autoCleanSeconds < 150) {
+        elements.cleanupDot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+        elements.cleanupTimer.classList.remove('text-red-400');
+        elements.cleanupTimer.classList.add('text-amber-400');
+      } else {
+        elements.cleanupDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+        elements.cleanupTimer.classList.remove('text-red-400', 'text-amber-400');
+      }
+    }
+
+    function runCleanup() {
+      // Clean inputs/outputs
+      elements.encPlaintext.value = '';
+      elements.encPassword.value = '';
+      elements.encOutput.value = '';
+      elements.encCharCount.textContent = '0 caratteri';
+      elements.encOutputCard.classList.add('hidden');
+
+      elements.decCiphertext.value = '';
+      elements.decPassword.value = '';
+      elements.decOutput.value = '';
+      elements.decOutputCard.classList.add('hidden');
+      elements.decErrorCard.classList.add('hidden');
+
+      elements.entropyTester.value = '';
+      elements.calcBits.textContent = '0.0 bit';
+      elements.calcRating.textContent = 'Vuota';
+      elements.calcBruteforce.textContent = 'N/D';
+
+      updatePasswordStrength('');
+      updateTesterStrength('');
+
+      showToast("Tutti i dati sensibili in memoria sono stati rimossi in sicurezza.", "info");
+      resetCleanupTimer();
+    }
+
+    function startSecurityTimer() {
+      if (AppState.timerInterval) clearInterval(AppState.timerInterval);
+      
+      AppState.timerInterval = setInterval(() => {
+        AppState.autoCleanSeconds--;
+        if (AppState.autoCleanSeconds <= 0) {
+          runCleanup();
+        } else {
+          updateCleanupUI();
+        }
+      }, 1000);
+    }
+
+    // Keep memory secure by resetting timer on user interaction
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+      window.addEventListener(evt, () => {
+        // Only reset if not already expired/zero to prevent loops during cleanup
+        if (AppState.autoCleanSeconds > 0 && AppState.autoCleanSeconds < 300) {
+          resetCleanupTimer();
+        }
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // HANDLERS: Password Strengths UI
+    // -------------------------------------------------------------------------
+    function updatePasswordStrength(password) {
+      const { entropy } = calculateEntropy(password);
+      const details = getStrengthDetails(entropy);
+
+      elements.encEntropyLabel.textContent = details.label;
+      elements.encEntropyLabel.className = `font-semibold ${details.color}`;
+      elements.encEntropyBar.style.width = details.width;
+      
+      // Clear class lists of bar and apply matching color background
+      elements.encEntropyBar.className = `h-full rounded-full transition-all duration-300 ${details.bg}`;
+    }
+
+    function updateTesterStrength(password) {
+      const { entropy } = calculateEntropy(password);
+      const details = getStrengthDetails(entropy);
+      const bruteForce = getBruteForceTime(entropy);
+
+      elements.calcBits.textContent = `${entropy.toFixed(1)} bit`;
+      elements.calcRating.textContent = details.label;
+      elements.calcRating.className = `text-sm font-bold block mt-1 ${details.color}`;
+      elements.calcBruteforce.textContent = bruteForce;
+    }
+
+    // -------------------------------------------------------------------------
+    // HANDLERS: Drag & Drop Files
+    // -------------------------------------------------------------------------
+    function setupDragAndDrop(textarea, focusClass, activeClass) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        textarea.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          textarea.classList.add(focusClass);
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        textarea.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          textarea.classList.remove(focusClass);
+        }, false);
+      });
+
+      textarea.addEventListener('drop', (e) => {
+        const file = e.dataTransfer.files[0];
+        if (file && (file.type === "text/plain" || file.name.endsWith('.txt'))) {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            textarea.value = evt.target.result;
+            textarea.dispatchEvent(new Event('input'));
+            showToast(`File "${file.name}" importato con successo.`, "success");
+          };
+          reader.readAsText(file);
+        } else {
+          showToast("Formato file non valido. Trascina un file di testo (.txt).", "error");
+        }
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // DEBOUNCED TESTING INPUTS
+    // -------------------------------------------------------------------------
+    let debounceTimer;
+    function debounce(func, delay = 150) {
+      return (...args) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => func(...args), delay);
+      };
+    }
+
+    // -------------------------------------------------------------------------
+    // EVENT LISTENERS BINDINGS
+    // -------------------------------------------------------------------------
+    function initApp() {
+      // Theme initial loader
+      const savedTheme = localStorage.getItem('cv_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      AppState.theme = savedTheme;
+      if (savedTheme === 'light') {
+        elements.themeIconDark.classList.remove('hidden');
+        elements.themeIconLight.classList.add('hidden');
+      }
+
+      // Load History
+      loadHistory();
+
+      // Start Security Timer
+      startSecurityTimer();
+      updateCleanupUI();
+
+      // Drag & drop setups
+      setupDragAndDrop(elements.encPlaintext, 'drag-over', 'drag-over');
+      setupDragAndDrop(elements.decCiphertext, 'drag-over-decrypt', 'drag-over-decrypt');
+
+      // Theme toggle click
+      elements.themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const targetTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', targetTheme);
+        AppState.theme = targetTheme;
+        localStorage.setItem('cv_theme', targetTheme);
+        
+        if (targetTheme === 'light') {
+          elements.themeIconDark.classList.remove('hidden');
+          elements.themeIconLight.classList.add('hidden');
+          showToast("Tema Chiaro attivato", "info");
+        } else {
+          elements.themeIconDark.classList.add('hidden');
+          elements.themeIconLight.classList.remove('hidden');
+          showToast("Tema Scuro attivato", "info");
+        }
+      });
+
+      // Manual Cleanup trigger
+      elements.btnManualCleanup.addEventListener('click', () => {
+        runCleanup();
+      });
+
+      // Tabs click
+      elements.tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          switchTab(btn.getAttribute('data-tab'));
+        });
+      });
+
+      // Toggle Password Visibility Eye-Slash
+      document.querySelectorAll('.btn-toggle-pw').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const input = btn.previousElementSibling;
+          if (input.type === 'password') {
+            input.type = 'text';
+            btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+          } else {
+            input.type = 'password';
+            btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+          }
+        });
+      });
+
+      // Realtime Char Counter Plaintext
+      elements.encPlaintext.addEventListener('input', () => {
+        elements.encCharCount.textContent = `${elements.encPlaintext.value.length} caratteri`;
+      });
+
+      // Password Entropy Realtime (debounced)
+      elements.encPassword.addEventListener('input', debounce((e) => {
+        updatePasswordStrength(e.target.value);
+      }));
+
+      // Key Length range change
+      elements.encKeyLen.addEventListener('input', (e) => {
+        elements.lblKeyLen.textContent = `${e.target.value} bit`;
+      });
+
+      // Algorithm change handler to manage Key Length constraints
+      elements.encAlgo.addEventListener('change', (e) => {
+        if (e.target.value === 'AES-CBC') {
+          elements.encKeyLen.value = '128';
+          elements.encKeyLen.disabled = true;
+          elements.lblKeyLen.textContent = '128 bit';
+        } else {
+          elements.encKeyLen.disabled = false;
+          elements.lblKeyLen.textContent = `${elements.encKeyLen.value} bit`;
+        }
+      });
+
+      // --- PRIMARY ENCRYPT ACTION ---
+      elements.btnEncrypt.addEventListener('click', async () => {
+        const text = elements.encPlaintext.value.trim();
+        const pw = elements.encPassword.value;
+        const keySize = parseInt(elements.encKeyLen.value);
+        const algo = elements.encAlgo.value;
+
+        if (!text) {
+          showToast("Inserisci del testo in chiaro da cifrare.", "error");
+          return;
+        }
+        if (!pw) {
+          showToast("Inserisci una password per proteggere il testo.", "error");
+          return;
+        }
+
+        // Add visual loading state
+        elements.btnEncrypt.disabled = true;
+        elements.btnEncrypt.innerHTML = `<svg class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Cifratura...`;
+
+        try {
+          const payload = await encryptText(text, pw, keySize, algo);
+          
+          elements.encOutput.value = payload;
+          elements.encOutputCard.classList.remove('hidden');
+          
+          // Smooth scroll to output
+          elements.encOutputCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          
+          // Save in History
+          await addHistoryItem('Cifratura', text, payload);
+          showToast("Testo cifrato generato in sicurezza.", "success");
+        } catch (e) {
+          console.error(e);
+          showToast("Impossibile cifrare il testo. Controlla le impostazioni.", "error");
+        } finally {
+          elements.btnEncrypt.disabled = false;
+          elements.btnEncrypt.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Cifra Testo`;
+        }
+      });
+
+      // Copy buttons
+      elements.btnCopyEnc.addEventListener('click', () => {
+        navigator.clipboard.writeText(elements.encOutput.value);
+        showToast("Payload cifrato copiato negli appunti.");
+      });
+
+      elements.btnCopyDec.addEventListener('click', () => {
+        navigator.clipboard.writeText(elements.decOutput.value);
+        showToast("Testo decifrato copiato negli appunti.");
+      });
+
+      // Download encrypted file
+      elements.btnDownloadEnc.addEventListener('click', () => {
+        const text = elements.encOutput.value;
+        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `cryptovault_payload_${Date.now()}.txt`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast("Payload scaricato come file .txt");
+      });
+
+      // --- PRIMARY DECRYPT ACTION ---
+      elements.btnDecrypt.addEventListener('click', async () => {
+        const ciphertext = elements.decCiphertext.value.trim();
+        const pw = elements.decPassword.value;
+        const algo = elements.decAlgo.value;
+
+        if (!ciphertext) {
+          showToast("Inserisci il payload cifrato.", "error");
+          return;
+        }
+        if (!pw) {
+          showToast("Inserisci la password di decifratura.", "error");
+          return;
+        }
+
+        elements.decErrorCard.classList.add('hidden');
+        elements.decOutputCard.classList.add('hidden');
+
+        elements.btnDecrypt.disabled = true;
+        elements.btnDecrypt.innerHTML = `<svg class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Decifratura...`;
+
+        try {
+          const plaintext = await decryptText(ciphertext, pw, algo);
+          
+          elements.decOutput.value = plaintext;
+          elements.decOutputCard.classList.remove('hidden');
+          elements.decOutputCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          
+          // Save in History
+          await addHistoryItem('Decifratura', plaintext, plaintext);
+          showToast("Decifratura completata con successo.", "success");
+        } catch (e) {
+          console.error(e);
+          elements.decErrorCard.classList.remove('hidden');
+          showToast("Chiave errata o formato payload non valido.", "error");
+        } finally {
+          elements.btnDecrypt.disabled = false;
+          elements.btnDecrypt.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path><circle cx="12" cy="16" r="1"></circle></svg> Decifra Testo`;
+        }
+      });
+
+      // --- PASSWORD GENERATOR ---
+      elements.genLen.addEventListener('input', (e) => {
+        elements.lblGenLen.textContent = `${e.target.value} caratteri`;
+      });
+
+      elements.btnGenerate.addEventListener('click', () => {
+        const length = parseInt(elements.genLen.value);
+        const options = {
+          lower: elements.chkLower.checked,
+          upper: elements.chkUpper.checked,
+          numbers: elements.chkNumbers.checked,
+          symbols: elements.chkSymbols.checked
+        };
+
+        if (!options.lower && !options.upper && !options.numbers && !options.symbols) {
+          showToast("Seleziona almeno un gruppo di caratteri.", "error");
+          return;
+        }
+
+        const password = generateSecurePassword(length, options);
+        elements.genPwOutput.textContent = password;
+        
+        // Also feed into entropy tester instantly
+        elements.entropyTester.value = password;
+        updateTesterStrength(password);
+        showToast("Nuova password generata.", "success");
+      });
+
+      elements.btnCopyGen.addEventListener('click', () => {
+        const pw = elements.genPwOutput.textContent;
+        if (pw && pw !== "Genera per iniziare...") {
+          navigator.clipboard.writeText(pw);
+          showToast("Password copiata negli appunti.");
+        }
+      });
+
+      // Entropy tester inputs realtime
+      elements.entropyTester.addEventListener('input', debounce((e) => {
+        updateTesterStrength(e.target.value);
+      }));
+
+      // --- CLEAR HISTORY ACTION ---
+      elements.btnClearHistory.addEventListener('click', async () => {
+        AppState.history = [];
+        await saveHistory();
+        renderHistory();
+        showToast("Tutta la cronologia è stata svuotata.", "info");
+      });
+
+      // --- KEYBOARD SHORTCUTS ---
+      window.addEventListener('keydown', (e) => {
+        // Ctrl+Enter: encrypt / decrypt based on active tab
+        if (e.ctrlKey && e.key === 'Enter') {
+          e.preventDefault();
+          if (AppState.activeTab === 'encrypt') {
+            elements.btnEncrypt.click();
+          } else if (AppState.activeTab === 'decrypt') {
+            elements.btnDecrypt.click();
+          }
+        }
+        // Esc: Clear active tab
+        if (e.key === 'Escape') {
+          if (AppState.activeTab === 'encrypt') {
+            elements.encPlaintext.value = '';
+            elements.encPassword.value = '';
+            elements.encOutput.value = '';
+            elements.encCharCount.textContent = '0 caratteri';
+            elements.encOutputCard.classList.add('hidden');
+            updatePasswordStrength('');
+            showToast("Campi Cifratura svuotati.", "info");
+          } else if (AppState.activeTab === 'decrypt') {
+            elements.decCiphertext.value = '';
+            elements.decPassword.value = '';
+            elements.decOutput.value = '';
+            elements.decOutputCard.classList.add('hidden');
+            elements.decErrorCard.classList.add('hidden');
+            showToast("Campi Decifratura svuotati.", "info");
+          }
+        }
+      });
+    }
+
+    // Run Initializer
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
