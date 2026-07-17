@@ -351,8 +351,8 @@
                   <div class="space-y-1">
                     <label for="enc-salt-size" class="text-[10px] uppercase font-bold text-gray-400 block">Dimensione Salt</label>
                     <select id="enc-salt-size" class="glass-input w-full rounded-xl py-1.5 px-2 text-xs">
-                      <option value="16" selected>16 byte (Standard)</option>
-                      <option value="32">32 byte (Paranoico)</option>
+                      <option value="16">16 byte (Standard)</option>
+                      <option value="32" selected>32 byte (Paranoico)</option>
                     </select>
                   </div>
                 </div>
@@ -375,7 +375,7 @@
                   <div class="w-full bg-gray-500/15 h-2 rounded-full overflow-hidden">
                     <div id="enc-entropy-bar" class="w-0 h-full bg-red-500 transition-all duration-300"></div>
                   </div>
-                  <p class="text-[10px] text-gray-400" id="enc-entropy-desc">Derivazione: PBKDF2 con <span id="lbl-iterations" class="font-bold text-emerald-400">210k</span> iterazioni.</p>
+                  <p class="text-[10px] text-gray-400" id="enc-entropy-desc">Derivazione: PBKDF2-<span id="lbl-hash-algo">SHA-256</span> &middot; <span id="lbl-iterations" class="font-bold text-emerald-400">210k</span> iterazioni &middot; <span id="lbl-salt-length" class="font-bold text-emerald-400">32</span> byte salt</p>
                 </div>
               </div>
 
@@ -547,6 +547,14 @@
                 </label>
               </div>
 
+              <div class="space-y-1.5 pt-2 border-t border-gray-500/10">
+                <div class="flex justify-between text-xs font-medium">
+                  <span>Forza Teorica</span>
+                  <span id="gen-entropy-label" class="text-indigo-400 font-semibold">Calcolo...</span>
+                </div>
+                <p class="text-[10px] text-gray-400" id="gen-entropy-desc">Pool: 0 caratteri &middot; Entropia: 0 bits</p>
+              </div>
+
               <button id="btn-generate" class="w-full py-2.5 px-4 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-slate-900 font-bold text-xs tracking-wider uppercase transition-all shadow-lg shadow-indigo-500/10 flex items-center justify-center gap-2 cursor-pointer pt-3">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
@@ -699,6 +707,18 @@
 
       <!-- TAB: HISTORY -->
       <section id="tab-history" class="tab-content space-y-6">
+        <div id="obsolete-warning-banner" class="hidden glass-card rounded-2xl p-4 border-l-4 border-amber-500 bg-amber-500/5">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <div>
+              <h4 class="text-sm font-bold text-amber-400">Sicurezza Obsoleta Rilevata</h4>
+              <p class="text-xs text-gray-300 mt-1">Alcuni testi cifrati nella tua cronologia utilizzano parametri vecchi o meno sicuri (es. meno di 600k iterazioni PBKDF2). Clicca su "Aggiorna Sicurezza" accanto agli elementi per ricifrarli con le impostazioni attuali.</p>
+            </div>
+          </div>
+        </div>
+
         <div class="glass-card rounded-2xl p-5 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -1056,6 +1076,8 @@
       encSaltSize: document.getElementById('enc-salt-size'),
       encIterations: document.getElementById('enc-iterations'),
       lblIterations: document.getElementById('lbl-iterations'),
+      lblHashAlgo: document.getElementById('lbl-hash-algo'),
+      lblSaltLength: document.getElementById('lbl-salt-length'),
       encEntropyLabel: document.getElementById('enc-entropy-label'),
       encEntropyBar: document.getElementById('enc-entropy-bar'),
       btnEncrypt: document.getElementById('btn-encrypt'),
@@ -1085,6 +1107,8 @@
       chkNumbers: document.getElementById('chk-numbers'),
       chkSymbols: document.getElementById('chk-symbols'),
       btnGenerate: document.getElementById('btn-generate'),
+      genEntropyLabel: document.getElementById('gen-entropy-label'),
+      genEntropyDesc: document.getElementById('gen-entropy-desc'),
       
       // Entropy tester
       entropyTester: document.getElementById('entropy-tester'),
@@ -1343,35 +1367,53 @@
 
     // -------------------------------------------------------------------------
     // CRITTOGRAFIA: Web Crypto API AES-GCM/AES-CBC + PBKDF2
+    // 
+    // ROADMAP (Sicurezza Futura):
+    // Argon2id è l'attuale standard de facto (raccomandato da OWASP) per la
+    // derivazione delle chiavi, in quanto offre maggiore resistenza agli
+    // attacchi paralleli (GPU/ASIC) grazie alla sua hard memory.
+    // Attualmente, Argon2id non è supportato nativamente dalla Web Crypto API
+    // (richiederebbe l'inclusione di una libreria WASM esterna, aumentando il bundle).
+    // Fino a quando non sarà disponibile nativamente, 600.000 iterazioni di
+    // PBKDF2-SHA-256 (o SHA-512) sono considerate sufficienti per applicazioni ad alta sicurezza.
     // -------------------------------------------------------------------------
-    async function deriveKeyFromPassword(password, saltBytes, keyLengthBits, algoType = "AES-GCM", iterations = 210000, hashAlgo = "SHA-256") {
+    async function deriveKeyFromPassword(password, saltBytes, keyLengthBits, algoType = "AES-GCM", iterations = 210000, hashAlgo = "SHA-256", kdfType = "PBKDF2") {
       const pwBytes = new TextEncoder().encode(password);
       
-      // Import password as PBKDF2 base key
-      const baseKey = await window.crypto.subtle.importKey(
-        "raw",
-        pwBytes,
-        { name: "PBKDF2" },
-        false,
-        ["deriveBits", "deriveKey"]
-      );
+      switch (kdfType) {
+        case "ARGON2ID":
+          // Placeholder per futura implementazione WASM
+          // return await deriveArgon2id(pwBytes, saltBytes, keyLengthBits);
+          throw new Error("Argon2id non è ancora supportato nativamente in questa build.");
 
-      // Securely zero-out plaintext password bytes in memory immediately after importing
-      pwBytes.fill(0);
+        case "PBKDF2":
+        default:
+          // Import password as PBKDF2 base key
+          const baseKey = await window.crypto.subtle.importKey(
+            "raw",
+            pwBytes,
+            { name: "PBKDF2" },
+            false,
+            ["deriveBits", "deriveKey"]
+          );
 
-      // Derive AES key with given iterations and hash algorithm
-      return await window.crypto.subtle.deriveKey(
-        {
-          name: "PBKDF2",
-          salt: saltBytes,
-          iterations: iterations,
-          hash: hashAlgo
-        },
-        baseKey,
-        { name: algoType, length: keyLengthBits },
-        false,
-        ["encrypt", "decrypt"]
-      );
+          // Securely zero-out plaintext password bytes in memory immediately after importing
+          pwBytes.fill(0);
+
+          // Derive AES key with given iterations and hash algorithm
+          return await window.crypto.subtle.deriveKey(
+            {
+              name: "PBKDF2",
+              salt: saltBytes,
+              iterations: iterations,
+              hash: hashAlgo
+            },
+            baseKey,
+            { name: algoType, length: keyLengthBits },
+            false,
+            ["encrypt", "decrypt"]
+          );
+      }
     }
 
     async function encryptText(plaintext, password, keyLengthBits, algoName = "AES-GCM", iterations = 210000, hashAlgo = "SHA-256", saltSize = 16) {
@@ -1494,7 +1536,7 @@
       if (patterns.lowercase.test(password)) poolSize += 26;
       if (patterns.uppercase.test(password)) poolSize += 26;
       if (patterns.digits.test(password)) poolSize += 10;
-      if (patterns.symbols.test(password)) poolSize += 33; // Approx ASCII symbol count
+      if (patterns.symbols.test(password)) poolSize += 34; // Pool of 34 symbols
 
       if (poolSize === 0) return { entropy: 0, poolSize: 0 };
       const entropy = len * Math.log2(poolSize);
@@ -1541,15 +1583,25 @@
       if (options.lower) charset += "abcdefghijklmnopqrstuvwxyz";
       if (options.upper) charset += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
       if (options.numbers) charset += "0123456789";
-      if (options.symbols) charset += "!@#$%^&*()_+-=[]{}|;':\",./<>?";
+      if (options.symbols) charset += "!@#$%^&*()_+-=[]{}|;':\",./<>?~`\\£€"; // 34 symbols
 
       if (charset === "") return "";
+      
+      const poolSize = charset.length;
+      // Rejection sampling per evitare il bias del modulo:
+      // Calcoliamo il massimo valore accettabile per garantire che ogni indice sia ugualmente probabile.
+      // Il massimo valore che Uint32 può assumere è 4294967295 (0xFFFFFFFF).
+      const maxRandom = 0xFFFFFFFF;
+      const limit = maxRandom - (maxRandom % poolSize);
 
-      const bytes = new Uint32Array(length);
-      window.crypto.getRandomValues(bytes);
       let result = "";
-      for (let i = 0; i < length; i++) {
-        result += charset[bytes[i] % charset.length];
+      while (result.length < length) {
+        const bytes = new Uint32Array(1);
+        window.crypto.getRandomValues(bytes);
+        // Scartiamo il valore e rigeneriamo se si trova nella zona di bias
+        if (bytes[0] <= limit) {
+          result += charset[bytes[0] % poolSize];
+        }
       }
       return result;
     }
@@ -1666,12 +1718,67 @@
       renderHistory();
     }
 
+    function isObsoletePayload(payload) {
+      if (!payload) return false;
+      const parts = payload.trim().split(':');
+      if (parts.length < 5) return true; // Missing hashAlgo or iterations
+      
+      const saltB64 = parts[0];
+      try {
+        const saltLength = base64ToArrayBuffer(saltB64).length;
+        if (saltLength < 32) return true;
+      } catch (e) {}
+      
+      const iterations = parseInt(parts[3], 10);
+      if (iterations < 600000) return true;
+      
+      return false;
+    }
+
+    async function upgradeItemSecurity(id) {
+      const item = AppState.history.find(x => x.id === id);
+      if (!item || item.type !== 'Cifratura') return;
+      
+      const password = window.prompt(`Aggiornamento Sicurezza\nInserisci la password utilizzata per decifrare l'elemento:\n"${item.label ? item.label : item.timestamp}"`);
+      if (!password) return;
+
+      try {
+        // Decifra il vecchio payload
+        const decrypted = await decryptText(item.payload, password);
+        
+        // Usa i parametri correnti configurati nella tab di Cifratura
+        const keySize = parseInt(elements.encKeyLen.value) || 256;
+        const algo = elements.encAlgo.value || "AES-GCM";
+        const iterations = parseInt(elements.encIterations.value, 10) || 600000;
+        const hashAlgo = elements.encHash.value || "SHA-256";
+        const saltSize = parseInt(elements.encSaltSize.value, 10) || 32;
+
+        // Ricifra con i nuovi parametri
+        const newPayload = await encryptText(decrypted, password, keySize, algo, iterations, hashAlgo, saltSize);
+        
+        // Aggiorna l'elemento nella cronologia
+        item.payload = newPayload;
+        item.truncated = newPayload.substring(0, 40) + "...";
+        item.timestamp = new Date().toLocaleString() + " (Aggiornato)";
+        
+        await saveHistory();
+        renderHistory();
+        showToast("Sicurezza dell'elemento aggiornata con successo con i nuovi parametri!", "success");
+      } catch (e) {
+        console.error("Upgrade error:", e);
+        showToast("Password non corretta o file corrotto.", "error");
+      }
+    }
+
     function renderHistory() {
       if (!elements.historyList) return;
+
+      const obsoleteBanner = document.getElementById('obsolete-warning-banner');
 
       if (AppState.history.length === 0) {
         elements.historyEmpty.classList.remove('hidden');
         elements.historyList.classList.add('hidden');
+        if(obsoleteBanner) obsoleteBanner.classList.add('hidden');
         return;
       }
 
@@ -1679,22 +1786,32 @@
       elements.historyList.classList.remove('hidden');
       elements.historyList.innerHTML = '';
 
+      let hasObsolete = false;
+
       AppState.history.forEach(item => {
         const div = document.createElement('div');
         div.className = 'py-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs';
         
         const badgeColor = item.type === 'Cifratura' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-400';
         
+        let isObsolete = false;
+        if (item.type === 'Cifratura') {
+          isObsolete = isObsoletePayload(item.payload);
+          if (isObsolete) hasObsolete = true;
+        }
+
         div.innerHTML = `
           <div class="space-y-1 max-w-xl">
             <div class="flex items-center gap-2">
               <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${badgeColor}">${item.type}</span>
               ${item.label ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 font-semibold border border-amber-500/20 max-w-[150px] truncate" title="${escapeHTML(item.label)}">${escapeHTML(item.label)}</span>` : ''}
               <span class="text-gray-400 text-[10px] font-mono">${item.timestamp}</span>
+              ${isObsolete ? `<span class="text-amber-500 text-[10px] font-bold bg-amber-500/10 px-1 rounded" title="Sicurezza obsoleta">⚠️ Vecchi Parametri</span>` : ''}
             </div>
             <p class="font-mono text-[11px] text-gray-300 break-all select-all">${escapeHTML(item.truncated)}</p>
           </div>
-          <div class="flex gap-1.5 shrink-0 w-full sm:w-auto justify-end">
+          <div class="flex gap-1.5 shrink-0 w-full sm:w-auto justify-end flex-wrap">
+            ${isObsolete ? `<button class="btn-upgrade py-1.5 px-2.5 rounded bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 hover:text-white cursor-pointer transition-all border border-amber-500/30" data-id="${item.id}">Aggiorna Sicurezza</button>` : ''}
             <button class="btn-restore py-1.5 px-2.5 rounded bg-gray-500/10 hover:bg-gray-500/20 text-gray-300 hover:text-white cursor-pointer transition-all" data-id="${item.id}">
               Carica
             </button>
@@ -1703,11 +1820,25 @@
             </button>
           </div>
         `;
-
         elements.historyList.appendChild(div);
       });
 
+      if (obsoleteBanner) {
+        if (hasObsolete) {
+          obsoleteBanner.classList.remove('hidden');
+        } else {
+          obsoleteBanner.classList.add('hidden');
+        }
+      }
+
       // Attach dynamic listeners
+      elements.historyList.querySelectorAll('.btn-upgrade').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          await upgradeItemSecurity(id);
+        });
+      });
+
       elements.historyList.querySelectorAll('.btn-restore').forEach(btn => {
         btn.addEventListener('click', (e) => {
           const id = e.currentTarget.getAttribute('data-id');
@@ -2089,10 +2220,10 @@
         // Convert hex back to bytes
         saltBytes = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
       } else {
-        // For new setups or password updates, upgrade security to 300,000 PBKDF2 iterations
-        iterations = 300000;
-        localStorage.setItem('vault_lock_iterations', '300000');
-        saltBytes = window.crypto.getRandomValues(new Uint8Array(16));
+        // For new setups or password updates, upgrade security to 600,000 PBKDF2 iterations
+        iterations = 600000;
+        localStorage.setItem('vault_lock_iterations', '600000');
+        saltBytes = window.crypto.getRandomValues(new Uint8Array(32));
         const newSaltHex = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
         localStorage.setItem('vault_lock_salt', newSaltHex);
       }
@@ -2159,9 +2290,13 @@
         AppState.lockCooldownUntil = 0;
       } else {
         AppState.failedLockAttempts++;
-        if (AppState.failedLockAttempts >= 5) {
-          AppState.lockCooldownUntil = Date.now() + 30000; // 30 secondi di cooldown
-          AppState.failedLockAttempts = 0;
+        if (AppState.failedLockAttempts >= 3) {
+          const penaltyIdx = AppState.failedLockAttempts - 3;
+          // Exponential cooldown: 5s, 15s, 45s, 2m (120s), 5m (300s)
+          const delays = [5000, 15000, 45000, 120000, 300000];
+          const delay = delays[Math.min(penaltyIdx, delays.length - 1)];
+          AppState.lockCooldownUntil = Date.now() + delay;
+          updateCooldownUI();
         }
       }
 
@@ -2509,6 +2644,30 @@
     // EVENT LISTENERS BINDINGS
     // -------------------------------------------------------------------------
     function initApp() {
+      // Security: Anti-tampering check for devtools
+      const devtoolsCheck = setInterval(() => {
+        if (sessionStorage.getItem('vault_app_locked') === 'true') {
+          const start = Date.now();
+          debugger;
+          if (Date.now() - start > 100) {
+            // DevTools is open and paused execution. Clear sensitive memory.
+            AppState.history = [];
+            sessionStorage.removeItem('cv_session_key');
+            renderHistory();
+            console.warn("Security Event: DevTools access while locked. Memory cleared.");
+          }
+        }
+      }, 2000);
+
+      // Early app lock check before doing anything sensitive
+      updateLockStatusUI();
+      setupActivityListeners();
+      resetAutoLockTimer();
+      
+      if (isLockEnabled() || sessionStorage.getItem('vault_app_locked') === 'true') {
+        lockAppImmediate();
+      }
+
       // Init Chart
       if (typeof renderChart === 'function') {
         chartRenderer = renderChart('entropy-chart-container');
@@ -2526,8 +2685,10 @@
         elements.themeIconLight.classList.add('hidden');
       }
 
-      // Load History
-      loadHistory();
+      // Load History ONLY if not locked
+      if (sessionStorage.getItem('vault_app_locked') !== 'true') {
+        loadHistory();
+      }
 
       // Start Security Timer
       startSecurityTimer();
@@ -2614,6 +2775,14 @@
         elements.lblIterations.textContent = `${(val / 1000).toFixed(0)}k`;
       });
 
+      // Hash algorithm and salt size change handlers
+      elements.encHash.addEventListener('change', (e) => {
+        elements.lblHashAlgo.textContent = e.target.value;
+      });
+      elements.encSaltSize.addEventListener('change', (e) => {
+        elements.lblSaltLength.textContent = e.target.value;
+      });
+
       // Algorithm change handler to manage Key Length constraints
       elements.encAlgo.addEventListener('change', (e) => {
         // Both AES-GCM and AES-CBC fully support 128, 192, and 256 bit keys in Web Crypto API
@@ -2628,6 +2797,8 @@
         const keySize = parseInt(elements.encKeyLen.value);
         const algo = elements.encAlgo.value;
         const iterations = parseInt(elements.encIterations.value, 10);
+        const hashAlgo = elements.encHash.value;
+        const saltSize = parseInt(elements.encSaltSize.value, 10);
 
         if (!text) {
           showToast("Inserisci del testo in chiaro da cifrare.", "error");
@@ -2643,7 +2814,7 @@
         elements.btnEncrypt.innerHTML = `<svg class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Cifratura...`;
 
         try {
-          const payload = await encryptText(text, pw, keySize, algo, iterations);
+          const payload = await encryptText(text, pw, keySize, algo, iterations, hashAlgo, saltSize);
           const label = elements.encLabel ? elements.encLabel.value.trim() : "";
           
           await registerUsedPassword(pw);
@@ -2731,9 +2902,44 @@
       });
 
       // --- PASSWORD GENERATOR ---
+      function updateGenLiveEntropy() {
+        const length = parseInt(elements.genLen.value);
+        let poolSize = 0;
+        if (elements.chkLower.checked) poolSize += 26;
+        if (elements.chkUpper.checked) poolSize += 26;
+        if (elements.chkNumbers.checked) poolSize += 10;
+        if (elements.chkSymbols.checked) poolSize += 34;
+
+        if (poolSize === 0 || length === 0) {
+          if(elements.genEntropyLabel) elements.genEntropyLabel.textContent = "N/A";
+          if(elements.genEntropyLabel) elements.genEntropyLabel.className = "text-gray-500 font-semibold";
+          if(elements.genEntropyDesc) elements.genEntropyDesc.innerHTML = `Pool: 0 caratteri &middot; Entropia: 0 bits`;
+          return;
+        }
+
+        const entropy = length * Math.log2(poolSize);
+        const details = getStrengthDetails(entropy);
+        if(elements.genEntropyLabel) {
+          elements.genEntropyLabel.textContent = details.label;
+          elements.genEntropyLabel.className = `font-semibold ${details.color}`;
+        }
+        if(elements.genEntropyDesc) {
+          elements.genEntropyDesc.innerHTML = `Pool: ${poolSize} caratteri &middot; Entropia: <strong>${Math.round(entropy)}</strong> bits`;
+        }
+      }
+
       elements.genLen.addEventListener('input', (e) => {
         elements.lblGenLen.textContent = `${e.target.value} caratteri`;
+        updateGenLiveEntropy();
       });
+
+      elements.chkLower.addEventListener('change', updateGenLiveEntropy);
+      elements.chkUpper.addEventListener('change', updateGenLiveEntropy);
+      elements.chkNumbers.addEventListener('change', updateGenLiveEntropy);
+      elements.chkSymbols.addEventListener('change', updateGenLiveEntropy);
+      
+      // Initialize live entropy
+      updateGenLiveEntropy();
 
       elements.btnGenerate.addEventListener('click', () => {
         const length = parseInt(elements.genLen.value);
@@ -3036,14 +3242,7 @@
       });
 
       // --- APP LOCK INITIALIZATION & EVENT LISTENERS ---
-      updateLockStatusUI();
-      setupActivityListeners();
-      resetAutoLockTimer();
       
-      if (isLockEnabled()) {
-        lockAppImmediate();
-      }
-
       // App Lock Button Click
       elements.appLockToggle.addEventListener('click', () => {
         if (isLockEnabled()) {
